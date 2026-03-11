@@ -21,6 +21,7 @@ dependencies:
   path_provider: ^2.1.5
   drift: ^2.31.0
   sqlite3_flutter_libs: ^0.6.0+eol
+  internet_speed_meter: ^1.0.3
   
 
 dev_dependencies:
