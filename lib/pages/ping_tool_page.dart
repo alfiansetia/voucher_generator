@@ -133,31 +133,36 @@ class _PingToolPageState extends State<PingToolPage> {
           },
         ),
       ),
-      body: Column(
-        children: [
-          _buildTopInput(),
-          _buildStatsGrid(),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: Row(
-              children: [
-                Icon(Icons.terminal, size: 16, color: Colors.grey),
-                SizedBox(width: 8),
-                Text(
-                  'LOG OUTPUT',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                    letterSpacing: 1,
-                  ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              _buildTopInput(),
+              _buildStatsGrid(),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.terminal, size: 16, color: Colors.grey),
+                    SizedBox(width: 8),
+                    Text(
+                      'LOG OUTPUT',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              // Use a fixed height for log area to keep it scrollable and stable
+              SizedBox(height: 300, child: _buildLogArea()),
+              _buildActionButton(),
+            ],
           ),
-          Expanded(child: _buildLogArea()),
-          _buildActionButton(),
-        ],
+        ),
       ),
     );
   }
