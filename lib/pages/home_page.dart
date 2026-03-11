@@ -8,9 +8,11 @@ import '../core/constants/app_constants.dart';
 import 'router_list_page.dart';
 import 'ping_tool_page.dart';
 import 'ip_calculator_page.dart';
-import 'network_discovery_page.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:http/http.dart' as http;
+import 'network_discovery_page.dart';
+import 'faq_page.dart';
+import 'privacy_policy_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -323,6 +325,58 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _showSettingsMenu() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'Settings & Info',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.help_outline),
+              title: const Text('FAQ'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const FaqPage()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.privacy_tip_outlined),
+              title: const Text('Privacy Policy'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PrivacyPolicyPage(),
+                  ),
+                );
+              },
+            ),
+            const ListTile(
+              leading: Icon(Icons.info_outline),
+              title: Text('App Version (Build Info)'),
+              trailing: Text('0.1.0+1', style: TextStyle(color: Colors.grey)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -447,7 +501,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 child: IconButton(
                   icon: const Icon(Icons.settings, color: Colors.white),
-                  onPressed: () {},
+                  onPressed: _showSettingsMenu,
                 ),
               ),
             ],
