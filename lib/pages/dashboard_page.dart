@@ -6,7 +6,7 @@ import '../bloc/mikrotik_event.dart';
 import '../bloc/mikrotik_state.dart';
 import '../core/constants/app_constants.dart';
 import '../core/utils/mikrotik_utils.dart';
-import 'router_list_page.dart';
+import 'home_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -53,7 +53,7 @@ class _DashboardPageState extends State<DashboardPage> {
       listener: (context, state) {
         if (state is MikrotikDisconnected) {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const RouterListPage()),
+            MaterialPageRoute(builder: (context) => const HomePage()),
             (route) => false,
           );
         } else if (state is MikrotikConnected && state.resources != null) {

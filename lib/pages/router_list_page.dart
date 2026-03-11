@@ -11,6 +11,7 @@ import '../components/router_card.dart';
 import '../core/constants/app_constants.dart';
 import '../models/router_model.dart';
 import 'dashboard_page.dart';
+import 'home_page.dart';
 
 class RouterListPage extends StatelessWidget {
   const RouterListPage({super.key});
@@ -76,6 +77,15 @@ class RouterListPage extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text(AppConstants.routerListTitle),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const HomePage()),
+                (route) => false,
+              );
+            },
+          ),
           elevation: 0,
           backgroundColor: AppConstants.primaryColor,
           foregroundColor: Colors.white,
