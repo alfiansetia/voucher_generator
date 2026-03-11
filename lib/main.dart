@@ -41,7 +41,7 @@ class MainApp extends StatelessWidget {
           ),
         ],
         child: MaterialApp(
-          title: 'Voucher Generator',
+          title: 'Network Tool',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
             primarySwatch: Colors.blue,
