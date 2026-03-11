@@ -19,6 +19,17 @@ class RouterListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocListener<MikrotikBloc, MikrotikState>(
+      listenWhen: (previous, current) {
+        // Hanya trigger listener jika sebelumnya sedang connecting dan sekarang connected
+        // Atau jika terjadi error/disconnect dari posisi manapun
+        if (previous is MikrotikConnecting && current is MikrotikConnected) {
+          return true;
+        }
+        if (current is MikrotikError || current is MikrotikDisconnected) {
+          return true;
+        }
+        return false;
+      },
       listener: (context, state) {
         if (state is MikrotikConnecting) {
           showDialog(
@@ -54,15 +65,15 @@ class RouterListPage extends StatelessWidget {
             ),
           );
         } else if (state is MikrotikConnected) {
-          // Close loading dialog if it's on top
-          // Using Navigator.pop(context) is safer here if we know the dialog is the only thing above us
-          Navigator.of(context).pop();
+          // Tutup dialog loading
+          Navigator.of(context, rootNavigator: true).pop();
+
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const DashboardPage()),
             (route) => false,
           );
         } else if (state is MikrotikError) {
-          Navigator.of(context).pop(); // Close loading dialog
+          Navigator.of(context, rootNavigator: true).pop();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.message), backgroundColor: Colors.red),
           );
