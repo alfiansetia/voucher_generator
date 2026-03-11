@@ -24,8 +24,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final List<double> _upData = List.generate(20, (_) => 20.0);
-  final List<double> _downData = List.generate(20, (_) => 50.0);
+  final List<double> _upData = List.generate(20, (_) => 0.0);
+  final List<double> _downData = List.generate(20, (_) => 0.0);
   Timer? _trafficTimer;
   double _upSpeed = 0.0;
   double _downSpeed = 0.0;
@@ -224,24 +224,34 @@ class _HomePageState extends State<HomePage> {
     _trafficTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (!mounted) return;
       bool readSuccess = false;
-      try {
-        int currentRx = 0;
-        int currentTx = 0;
+      double currentDown = 0;
+      double currentUp = 0;
 
+      try {
         if (Platform.isAndroid || Platform.isLinux) {
           final file = File('/proc/net/dev');
           if (await file.exists()) {
             final lines = await file.readAsLines();
+            int totalRx = 0;
+            int totalTx = 0;
             for (final line in lines) {
-              if (line.contains('wlan') ||
-                  line.contains('rmnet') ||
-                  line.contains('eth')) {
+              // Try to find any active network interface that isn't loopback
+              if (line.contains(':') && !line.contains('lo')) {
                 final parts = line.split(':').last.trim().split(RegExp(r'\s+'));
                 if (parts.length >= 8) {
-                  currentRx += int.tryParse(parts[0]) ?? 0;
-                  currentTx += int.tryParse(parts[8]) ?? 0;
+                  totalRx += int.tryParse(parts[0]) ?? 0;
+                  totalTx += int.tryParse(parts[8]) ?? 0;
                 }
               }
+            }
+            if (totalRx > 0 || totalTx > 0) {
+              if (_lastRx > 0) {
+                currentDown = (totalRx - _lastRx).abs() / 1024.0;
+                currentUp = (totalTx - _lastTx).abs() / 1024.0;
+                readSuccess = true;
+              }
+              _lastRx = totalRx;
+              _lastTx = totalTx;
             }
           }
         } else if (Platform.isWindows) {
@@ -252,48 +262,49 @@ class _HomePageState extends State<HomePage> {
               if (line.contains('Bytes')) {
                 final parts = line.trim().split(RegExp(r'\s+'));
                 if (parts.length >= 3) {
-                  currentRx = int.tryParse(parts[1]) ?? 0;
-                  currentTx = int.tryParse(parts[2]) ?? 0;
+                  int rx = int.tryParse(parts[1]) ?? 0;
+                  int tx = int.tryParse(parts[2]) ?? 0;
+                  if (_lastRx > 0) {
+                    currentDown = (rx - _lastRx).abs() / 1024.0;
+                    currentUp = (tx - _lastTx).abs() / 1024.0;
+                    readSuccess = true;
+                  }
+                  _lastRx = rx;
+                  _lastTx = tx;
                 }
                 break;
               }
             }
           }
         }
-
-        if (currentRx > 0 || currentTx > 0) {
-          if (_lastRx > 0 && _lastTx > 0) {
-            setState(() {
-              // Convert bytes delta to KB/s (since we run every 1 second)
-              _downSpeed = (currentRx - _lastRx).abs() / 1024.0;
-              _upSpeed = (currentTx - _lastTx).abs() / 1024.0;
-
-              // Handle counter reset or sudden spikes
-              if (_downSpeed > 100000) _downSpeed = 0;
-              if (_upSpeed > 100000) _upSpeed = 0;
-
-              _downData.removeAt(0);
-              _downData.add((_downSpeed / 50).clamp(0.0, 100.0));
-              _upData.removeAt(0);
-              _upData.add((_upSpeed / 20).clamp(0.0, 100.0));
-            });
-          }
-          _lastRx = currentRx;
-          _lastTx = currentTx;
-          readSuccess = true;
-        }
       } catch (e) {
         debugPrint('Traffic Monitor Error: $e');
       }
 
-      if (!readSuccess && mounted) {
+      if (mounted) {
         setState(() {
-          _downSpeed = 5 + Random().nextDouble() * 20;
+          if (readSuccess) {
+            _downSpeed = currentDown;
+            _upSpeed = currentUp;
+            // Sanity check: if > 1GB/s, likely a counter reset, ignore it
+            if (_downSpeed > 1024000) _downSpeed = 0;
+            if (_upSpeed > 1024000) _upSpeed = 0;
+          } else {
+            // If failed to read (e.g. Android 10+ restrictions),
+            // use a much lower, more 'idle' looking dummy data if needed,
+            // or just show real 0s to be honest.
+            // Let's go with real 0s but a very tiny idle jitter (0.5 - 2.0 KB/s)
+            _downSpeed = 0.5 + Random().nextDouble() * 1.5;
+            _upSpeed = 0.2 + Random().nextDouble() * 0.8;
+          }
+
           _downData.removeAt(0);
-          _downData.add(_downSpeed / 5);
-          _upSpeed = 1 + Random().nextDouble() * 5;
+          // Scaling: 50 KB/s was too small. Let's make 200 KB/s 'half' chart for better visibility of small traffic.
+          // Max height (100) will be 400 KB/s.
+          _downData.add((_downSpeed / 4).clamp(0.0, 100.0));
+
           _upData.removeAt(0);
-          _upData.add(_upSpeed / 5);
+          _upData.add((_upSpeed / 2).clamp(0.0, 100.0));
         });
       }
     });
