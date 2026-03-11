@@ -1,12 +1,13 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../database/router_db.dart';
+import '../core/exceptions/router_exception.dart';
+import '../repositories/router_repository.dart';
 import 'router_event.dart';
 import 'router_state.dart';
 
 class RouterBloc extends Bloc<RouterEvent, RouterState> {
-  final RouterDB db = RouterDB.instance;
+  final RouterRepository repository;
 
-  RouterBloc() : super(RouterInitial()) {
+  RouterBloc({required this.repository}) : super(RouterInitial()) {
     on<LoadRouters>(_onLoadRouters);
     on<AddRouter>(_onAddRouter);
     on<UpdateRouter>(_onUpdateRouter);
@@ -19,19 +20,23 @@ class RouterBloc extends Bloc<RouterEvent, RouterState> {
   ) async {
     emit(RouterLoading());
     try {
-      final routers = await db.getAllRouters();
+      final routers = await repository.getRouters();
       emit(RouterLoaded(routers));
+    } on RouterException catch (e) {
+      emit(RouterError(e.message));
     } catch (e) {
-      emit(RouterError(e.toString()));
+      emit(RouterError('An unexpected error occurred: $e'));
     }
   }
 
   Future<void> _onAddRouter(AddRouter event, Emitter<RouterState> emit) async {
     try {
-      await db.insertRouter(event.router);
+      await repository.addRouter(event.router);
       add(LoadRouters());
+    } on RouterException catch (e) {
+      emit(RouterError(e.message));
     } catch (e) {
-      emit(RouterError(e.toString()));
+      emit(RouterError('Failed to add router: $e'));
     }
   }
 
@@ -40,10 +45,12 @@ class RouterBloc extends Bloc<RouterEvent, RouterState> {
     Emitter<RouterState> emit,
   ) async {
     try {
-      await db.updateRouter(event.router);
+      await repository.updateRouter(event.router);
       add(LoadRouters());
+    } on RouterException catch (e) {
+      emit(RouterError(e.message));
     } catch (e) {
-      emit(RouterError(e.toString()));
+      emit(RouterError('Failed to update router: $e'));
     }
   }
 
@@ -52,10 +59,12 @@ class RouterBloc extends Bloc<RouterEvent, RouterState> {
     Emitter<RouterState> emit,
   ) async {
     try {
-      await db.deleteRouter(event.id);
+      await repository.deleteRouter(event.id);
       add(LoadRouters());
+    } on RouterException catch (e) {
+      emit(RouterError(e.message));
     } catch (e) {
-      emit(RouterError(e.toString()));
+      emit(RouterError('Failed to delete router: $e'));
     }
   }
 }

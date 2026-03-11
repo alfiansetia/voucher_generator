@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import '../core/constants/db_constants.dart';
 import '../models/router_model.dart';
 
 class RouterDB {
@@ -10,7 +11,7 @@ class RouterDB {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('router.db');
+    _database = await _initDB(DBConstants.databaseName);
     return _database!;
   }
 
@@ -18,7 +19,11 @@ class RouterDB {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(
+      path,
+      version: DBConstants.databaseVersion,
+      onCreate: _createDB,
+    );
   }
 
   Future _createDB(Database db, int version) async {
@@ -27,32 +32,32 @@ class RouterDB {
     const intType = 'INTEGER NOT NULL';
 
     await db.execute('''
-CREATE TABLE routers (
-  id $idType,
-  name $textType,
-  ip $textType,
-  username $textType,
-  password $textType,
-  port $intType
-)
-''');
+      CREATE TABLE ${DBConstants.routersTable} (
+          id $idType,
+          name $textType,
+          ip $textType,
+          username $textType,
+          password $textType,
+          port $intType
+        )
+      ''');
   }
 
   Future<int> insertRouter(RouterModel router) async {
     final db = await instance.database;
-    return await db.insert('routers', router.toMap());
+    return await db.insert(DBConstants.routersTable, router.toMap());
   }
 
   Future<List<RouterModel>> getAllRouters() async {
     final db = await instance.database;
-    final result = await db.query('routers');
+    final result = await db.query(DBConstants.routersTable);
     return result.map((map) => RouterModel.fromMap(map)).toList();
   }
 
   Future<int> updateRouter(RouterModel router) async {
     final db = await instance.database;
     return db.update(
-      'routers',
+      DBConstants.routersTable,
       router.toMap(),
       where: 'id = ?',
       whereArgs: [router.id],
@@ -61,7 +66,11 @@ CREATE TABLE routers (
 
   Future<int> deleteRouter(int id) async {
     final db = await instance.database;
-    return await db.delete('routers', where: 'id = ?', whereArgs: [id]);
+    return await db.delete(
+      DBConstants.routersTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   Future close() async {
