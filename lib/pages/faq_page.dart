@@ -6,6 +6,8 @@ class FaqPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final List<Map<String, String>> faqs = [
       {
         'question': 'Apa itu aplikasi Network Tool?',
@@ -35,41 +37,106 @@ class FaqPage extends StatelessWidget {
     ];
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Frequently Asked Questions'),
+        title: const Text('Settings & FAQ'),
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-        itemCount: faqs.length,
-        separatorBuilder: (context, index) => const Divider(height: 30),
-        itemBuilder: (context, index) {
-          return ExpansionTile(
-            title: Text(
-              faqs[index]['question']!,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: Colors.black87,
+      body: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        children: [
+          _buildSectionHeader('COMMON QUESTIONS'),
+          const SizedBox(height: 10),
+          ...faqs.map((faq) => _buildFaqCard(context, faq, isDark)),
+          const SizedBox(height: 40),
+          _buildFooter(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFaqCard(
+    BuildContext context,
+    Map<String, String> faq,
+    bool isDark,
+  ) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.grey.shade200,
+        ),
+      ),
+      child: ExpansionTile(
+        shape: const RoundedRectangleBorder(
+          side: BorderSide(color: Colors.transparent),
+        ),
+        collapsedShape: const RoundedRectangleBorder(
+          side: BorderSide(color: Colors.transparent),
+        ),
+        title: Text(
+          faq['question']!,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+        iconColor: AppConstants.primaryColor,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Text(
+              faq['answer']!,
+              style: TextStyle(
+                color: isDark ? Colors.grey[400] : Colors.grey[700],
+                height: 1.5,
+                fontSize: 13,
               ),
+              textAlign: TextAlign.justify,
             ),
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(
-                  left: 16.0,
-                  right: 16.0,
-                  bottom: 16.0,
-                ),
-                child: Text(
-                  faqs[index]['answer']!,
-                  style: TextStyle(color: Colors.grey[700], height: 1.5),
-                  textAlign: TextAlign.justify,
-                ),
-              ),
-            ],
-          );
-        },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFooter() {
+    return Center(
+      child: Opacity(
+        opacity: 0.5,
+        child: Column(
+          children: [
+            const Icon(Icons.hub, size: 40),
+            const SizedBox(height: 8),
+            const Text('Network Tool v1.0.0', style: TextStyle(fontSize: 12)),
+            const SizedBox(height: 4),
+            const Text(
+              'Made with ❤️ for Bos Networkers',
+              style: TextStyle(fontSize: 10),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

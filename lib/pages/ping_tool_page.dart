@@ -20,7 +20,6 @@ class _PingToolPageState extends State<PingToolPage> {
   final ScrollController _scrollController = ScrollController();
   bool _isPinging = false;
 
-  // Real-time calculation helpers
   int _transmitted = 0;
   int _received = 0;
   int _lost = 0;
@@ -64,12 +63,9 @@ class _PingToolPageState extends State<PingToolPage> {
           final res = event.response!;
           _responses.add(res);
           _transmitted++;
-
           if (res.time != null) {
             _received++;
             final ms = res.time!.inMilliseconds;
-
-            // Stats updates
             _minTime = (_minTime == null || ms < _minTime!) ? ms : _minTime;
             _maxTime = (_maxTime == null || ms > _maxTime!) ? ms : _maxTime;
             _avgTime = (_avgTime == null)
@@ -79,13 +75,8 @@ class _PingToolPageState extends State<PingToolPage> {
             _lost++;
           }
         }
-
-        if (event.summary != null) {
-          _isPinging = false;
-        }
+        if (event.summary != null) _isPinging = false;
       });
-
-      // Auto scroll
       Timer(const Duration(milliseconds: 100), () {
         if (_scrollController.hasClients) {
           _scrollController.animateTo(
@@ -100,9 +91,7 @@ class _PingToolPageState extends State<PingToolPage> {
 
   void _stopPing() {
     _subscription?.cancel();
-    setState(() {
-      _isPinging = false;
-    });
+    setState(() => _isPinging = false);
   }
 
   @override
@@ -115,8 +104,9 @@ class _PingToolPageState extends State<PingToolPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       appBar: AppBar(
         title: const Text('Ping Tool'),
         backgroundColor: AppConstants.primaryColor,
@@ -124,46 +114,60 @@ class _PingToolPageState extends State<PingToolPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            _stopPing();
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const HomePage()),
-              (route) => false,
-            );
-          },
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildTopInput(),
-              _buildStatsGrid(),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Row(
-                  children: [
-                    Icon(Icons.terminal, size: 16, color: Colors.grey),
-                    SizedBox(width: 8),
-                    Text(
-                      'LOG OUTPUT',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Use a fixed height for log area to keep it scrollable and stable
-              SizedBox(height: 300, child: _buildLogArea()),
-              _buildActionButton(),
-            ],
+          onPressed: () => Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const HomePage()),
+            (route) => false,
           ),
         ),
       ),
+      body: Column(
+        children: [
+          _buildTopInput(),
+          _buildStatsGrid(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.terminal,
+                  size: 16,
+                  color: isDark ? Colors.white38 : Colors.grey,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'TERMINAL OUTPUT',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white38 : Colors.grey,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(child: _buildLogArea()),
+          const SizedBox(height: 80),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _togglePing,
+        backgroundColor: _isPinging
+            ? Colors.redAccent
+            : AppConstants.primaryColor,
+        icon: Icon(
+          _isPinging ? Icons.stop : Icons.play_arrow,
+          color: Colors.white,
+        ),
+        label: Text(
+          _isPinging ? 'STOP' : 'START PING',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
@@ -177,33 +181,25 @@ class _PingToolPageState extends State<PingToolPage> {
           bottomRight: Radius.circular(30),
         ),
       ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-            ),
-            child: TextField(
-              controller: _hostController,
-              enabled: !_isPinging,
-              style: const TextStyle(color: Colors.white, fontSize: 18),
-              decoration: const InputDecoration(
-                hintText: 'Enter IP or Hostname...',
-                hintStyle: TextStyle(color: Colors.white54),
-                border: InputBorder.none,
-                icon: Icon(Icons.language, color: Colors.white70),
-              ),
-            ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        ),
+        child: TextField(
+          controller: _hostController,
+          enabled: !_isPinging,
+          style: const TextStyle(color: Colors.white, fontSize: 18),
+          decoration: const InputDecoration(
+            hintText: 'IP or Domain...',
+            hintStyle: TextStyle(color: Colors.white54),
+            border: InputBorder.none,
+            icon: Icon(Icons.sensors, color: Colors.white70),
           ),
-          const SizedBox(height: 10),
-          const Text(
-            'Example: google.com or 192.168.1.1',
-            style: TextStyle(color: Colors.white60, fontSize: 12),
-          ),
-        ],
+          onSubmitted: (_) => _startPing(),
+        ),
       ),
     );
   }
@@ -246,19 +242,22 @@ class _PingToolPageState extends State<PingToolPage> {
   }
 
   Widget _buildStatCard(String label, String value, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.05),
+            color: isDark ? Colors.black26 : color.withValues(alpha: 0.05),
             blurRadius: 10,
             spreadRadius: 2,
           ),
         ],
-        border: Border.all(color: color.withValues(alpha: 0.1)),
+        border: Border.all(
+          color: isDark ? Colors.white10 : color.withValues(alpha: 0.1),
+        ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -267,7 +266,7 @@ class _PingToolPageState extends State<PingToolPage> {
             label,
             style: TextStyle(
               fontSize: 10,
-              color: Colors.grey[600],
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -288,12 +287,15 @@ class _PingToolPageState extends State<PingToolPage> {
   }
 
   Widget _buildLogArea() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.grey.shade200,
+        ),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
@@ -305,12 +307,14 @@ class _PingToolPageState extends State<PingToolPage> {
                     Icon(
                       Icons.wifi_tethering,
                       size: 48,
-                      color: Colors.grey[300],
+                      color: isDark ? Colors.white10 : Colors.grey[300],
                     ),
                     const SizedBox(height: 10),
-                    const Text(
+                    Text(
                       'No diagnostic data yet',
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(
+                        color: isDark ? Colors.grey[600] : Colors.grey,
+                      ),
                     ),
                   ],
                 ),
@@ -322,6 +326,7 @@ class _PingToolPageState extends State<PingToolPage> {
                 itemBuilder: (context, index) {
                   final res = _responses[index];
                   final isSuccess = res.time != null;
+                  final Color rowColor = isSuccess ? Colors.green : Colors.red;
                   return Container(
                     margin: const EdgeInsets.only(bottom: 5),
                     padding: const EdgeInsets.symmetric(
@@ -329,9 +334,7 @@ class _PingToolPageState extends State<PingToolPage> {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: isSuccess
-                          ? Colors.green.withValues(alpha: 0.05)
-                          : Colors.red.withValues(alpha: 0.05),
+                      color: rowColor.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -345,19 +348,15 @@ class _PingToolPageState extends State<PingToolPage> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Icon(
-                          Icons.arrow_right_alt,
-                          size: 14,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(width: 8),
                         Text(
                           isSuccess
                               ? 'Reply from ${_hostController.text}'
                               : 'Request Timeout',
                           style: TextStyle(
                             fontSize: 13,
-                            color: isSuccess ? Colors.black87 : Colors.red[700],
+                            color: isSuccess
+                                ? (isDark ? Colors.white : Colors.black87)
+                                : Colors.red[700],
                             fontWeight: isSuccess
                                 ? FontWeight.normal
                                 : FontWeight.bold,
@@ -378,47 +377,6 @@ class _PingToolPageState extends State<PingToolPage> {
                   );
                 },
               ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: SizedBox(
-        width: double.infinity,
-        height: 55,
-        child: ElevatedButton(
-          onPressed: _togglePing,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _isPinging
-                ? Colors.redAccent
-                : AppConstants.primaryColor,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
-            elevation: 5,
-            shadowColor:
-                (_isPinging ? Colors.redAccent : AppConstants.primaryColor)
-                    .withValues(alpha: 0.5),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(_isPinging ? Icons.stop : Icons.sensors),
-              const SizedBox(width: 10),
-              Text(
-                _isPinging ? 'STOP DIAGNOSTIC' : 'RUN DIAGNOSTIC',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

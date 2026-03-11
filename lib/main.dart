@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'bloc/router_bloc.dart';
 import 'bloc/mikrotik_bloc.dart';
+import 'bloc/theme_bloc.dart';
 import 'pages/splash_screen.dart';
 import 'repositories/router_repository.dart';
 import 'repositories/mikrotik_repository.dart';
@@ -39,16 +40,33 @@ class MainApp extends StatelessWidget {
             create: (context) =>
                 MikrotikBloc(repository: context.read<MikrotikRepository>()),
           ),
+          BlocProvider(create: (context) => ThemeBloc()..add(LoadThemeEvent())),
         ],
-        child: MaterialApp(
-          title: 'Network Tool',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            primarySwatch: Colors.blue,
-            useMaterial3: true,
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          ),
-          home: const SplashScreen(),
+        child: BlocBuilder<ThemeBloc, ThemeState>(
+          builder: (context, state) {
+            return MaterialApp(
+              title: 'Network Tool',
+              debugShowCheckedModeBanner: false,
+              themeMode: state.themeMode,
+              theme: ThemeData(
+                primarySwatch: Colors.blue,
+                useMaterial3: true,
+                colorScheme: ColorScheme.fromSeed(
+                  seedColor: Colors.blue,
+                  brightness: Brightness.light,
+                ),
+              ),
+              darkTheme: ThemeData(
+                useMaterial3: true,
+                colorScheme: ColorScheme.fromSeed(
+                  seedColor: Colors.blue,
+                  brightness: Brightness.dark,
+                ),
+                scaffoldBackgroundColor: const Color(0xFF121212),
+              ),
+              home: const SplashScreen(),
+            );
+          },
         ),
       ),
     );

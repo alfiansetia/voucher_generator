@@ -6,7 +6,9 @@ class PrivacyPolicyPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       appBar: AppBar(
         title: const Text('Privacy Policy'),
         backgroundColor: AppConstants.primaryColor,
@@ -17,11 +19,11 @@ class PrivacyPolicyPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Privacy Policy & Term of Service',
               style: TextStyle(
                 fontSize: 22,
-                color: Colors.black87,
+                color: isDark ? Colors.white : Colors.black87,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -32,22 +34,27 @@ class PrivacyPolicyPage extends StatelessWidget {
             ),
             const SizedBox(height: 25),
             _buildSection(
+              context,
               '1. Pengumpulan Informasi (Data Collection)',
               'Aplikasi Network Tool memerlukan akses baca kepada alamat IP (Internet Protocol), status koneksi WiFi Anda (SSID dan Subnet), data traffik jaringan (/proc/net/dev), dan lokasi presisi (hanya jika diperlukan oleh sistem OS) agar dapat menampilkan data jaringan secara akurat. Data tersebut diproses 100% lokal di HP Anda dan tidak diunggah ke cloud.',
             ),
             _buildSection(
+              context,
               '2. Keamanan Login Router',
               'Seluruh data otentikasi (alamat IP router, port API, username, password) disimpan sangat rahasia di dalam database SQLite bawaan perangkat (HP) yang aman. Pengembang TIDAK MEMILIKI AKSES DAN TIDAK AKAN MENGUMPULKAN data pribadi router Anda. Semua instruksi antara aplikasi dan MikroTik berjalan secara point-to-point tanpa middleware.',
             ),
             _buildSection(
+              context,
               '3. Fitur Pihak Ketiga (Third-Party Services)',
               'Kami menggunakan API gratis publik (yaitu ipify.org dan ipinfo.io) khusus untuk satu tujuan: mengecek IP Publik (Public IP Address) dari koneksi internet Anda beserta nama perusahaannya. IP Publik Anda dibaca oleh penyedia tersebut mengikuti kebijakan privasi mereka sendiri.',
             ),
             _buildSection(
+              context,
               '4. Keamanan dan Jaminan',
               'Kami berusaha menggunakan prosedur keamanan yang wajar untuk melindungi informasi Anda. Namun, tidak ada metode transmisi internet atau penyimpanan elektronik yang 100% sempurna. Anda menggunakan aplikasi ini atas kebijakan dan risiko Anda sendiri. Kerusakan perangkat jaringan di luar batas tanggung jawab kami.',
             ),
             _buildSection(
+              context,
               '5. Perubahan Kebijakan Privasi',
               'Dari waktu ke waktu dan setiap ada rilis terbaru, kami mungkin memperbarui kebijakan privasi ini untuk mencerminkan perubahan cara kerja aplikasi. Kebijakan ini selalu mutlak berlaku.',
             ),
@@ -57,7 +64,8 @@ class PrivacyPolicyPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(String title, String content) {
+  Widget _buildSection(BuildContext context, String title, String content) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 25),
       child: Column(
@@ -86,7 +94,7 @@ class PrivacyPolicyPage extends StatelessWidget {
               content,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey[800],
+                color: isDark ? Colors.grey[400] : Colors.grey[800],
                 height: 1.6,
               ),
               textAlign: TextAlign.justify,

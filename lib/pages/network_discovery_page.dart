@@ -142,8 +142,9 @@ class _NetworkDiscoveryPageState extends State<NetworkDiscoveryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       appBar: AppBar(
         title: const Text('Network Discovery'),
         backgroundColor: AppConstants.primaryColor,
@@ -161,23 +162,10 @@ class _NetworkDiscoveryPageState extends State<NetworkDiscoveryPage> {
         children: [
           _buildScanHeader(),
           if (_isScanning)
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 20),
-              width: double.infinity,
-              color: Colors.blue.withValues(alpha: 0.05),
-              child: const Row(
-                children: [
-                  Icon(Icons.sync, color: Colors.blue, size: 16),
-                  SizedBox(width: 12),
-                  Text(
-                    'SCANNING IN PROGRESS...',
-                    style: TextStyle(
-                      color: Colors.blue,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+            LinearProgressIndicator(
+              backgroundColor: isDark ? Colors.white10 : Colors.blue.shade50,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isDark ? Colors.blue[400]! : AppConstants.primaryColor,
               ),
             ),
           Expanded(

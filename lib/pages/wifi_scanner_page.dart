@@ -17,7 +17,6 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
   List<WiFiAccessPoint> _accessPoints = [];
   String _statusMessage = 'Press Scan to discover nearby WiFi networks.';
 
-  // Sort
   _SortMode _sortMode = _SortMode.signal;
   _BandType _bandView = _BandType.twoPointFour;
 
@@ -30,7 +29,6 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
       return;
     }
 
-    // Request permissions
     final locationStatus = await Permission.locationWhenInUse.request();
     if (!locationStatus.isGranted) {
       if (!mounted) return;
@@ -52,7 +50,6 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
     });
 
     try {
-      // Check if scanning is supported
       final canScan = await WiFiScan.instance.canStartScan(
         askPermissions: true,
       );
@@ -166,29 +163,20 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
     }
   }
 
-  // Convert level (dBm) to percentage (0-100)
   int _levelToPercent(int level) {
     if (level <= -100) return 0;
     if (level >= -50) return 100;
     return 2 * (level + 100);
   }
 
-  // Convert frequency (MHz) to WiFi channel number
   String _frequencyToChannel(int freq) {
     if (freq <= 0) return '?';
-    // 2.4 GHz band: channels 1-14
     if (freq >= 2412 && freq <= 2484) {
       if (freq == 2484) return '14';
       return '${(freq - 2412) ~/ 5 + 1}';
     }
-    // 5 GHz band: channels 36-177
-    if (freq >= 5170 && freq <= 5905) {
-      return '${(freq - 5000) ~/ 5}';
-    }
-    // 6 GHz band: Wi-Fi 6E channels
-    if (freq >= 5955 && freq <= 7115) {
-      return '${(freq - 5950) ~/ 5}';
-    }
+    if (freq >= 5170 && freq <= 5905) return '${(freq - 5000) ~/ 5}';
+    if (freq >= 5955 && freq <= 7115) return '${(freq - 5950) ~/ 5}';
     return '?';
   }
 
@@ -208,6 +196,7 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
   }
 
   Widget _bandButton(String label, _BandType type) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSelected = _bandView == type;
     return Expanded(
       child: InkWell(
@@ -215,12 +204,16 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? AppConstants.primaryColor : Colors.white,
+            color: isSelected
+                ? AppConstants.primaryColor
+                : (isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : Colors.white),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isSelected
-                  ? AppConstants.primaryColor
-                  : Colors.grey.shade300,
+                  ? const Color.fromARGB(255, 20, 25, 34)
+                  : (isDark ? Colors.white10 : Colors.grey.shade300),
             ),
           ),
           child: Text(
@@ -229,7 +222,9 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: isSelected ? Colors.white : Colors.grey[600],
+              color: isSelected
+                  ? Colors.white
+                  : (isDark ? Colors.grey[400] : Colors.grey[600]),
             ),
           ),
         ),
@@ -253,7 +248,7 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A), // Sleek dark analyzer look
+        color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
@@ -279,7 +274,6 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
                 style: TextStyle(color: Colors.white24, fontSize: 12),
               ),
             ),
-          // Band Label Overlay
           Positioned(
             top: 0,
             right: 0,
@@ -301,8 +295,9 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       appBar: AppBar(
         title: const Text('WiFi Scanner'),
         backgroundColor: AppConstants.primaryColor,
@@ -342,7 +337,6 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // Status Banner
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -378,16 +372,16 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
                 ],
               ),
             ),
-
-            // Stats Row
             if (_accessPoints.isNotEmpty)
               Container(
                 margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                   borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: Colors.grey.shade200),
+                  border: Border.all(
+                    color: isDark ? Colors.white10 : Colors.grey.shade200,
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -413,14 +407,11 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
                   ],
                 ),
               ),
-
             if (_accessPoints.isNotEmpty) ...[
               const SizedBox(height: 8),
               _buildBandToggle(),
               _buildChannelChart(),
             ],
-
-            // AP List
             Expanded(
               child: _accessPoints.isEmpty && !_isScanning
                   ? Center(
@@ -430,14 +421,16 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
                           Icon(
                             Icons.wifi_off,
                             size: 64,
-                            color: Colors.grey[300],
+                            color: isDark ? Colors.white10 : Colors.grey[300],
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'No networks found.\nPress Scan to start.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: Colors.grey[500],
+                              color: isDark
+                                  ? Colors.grey[600]
+                                  : Colors.grey[500],
                               fontSize: 15,
                             ),
                           ),
@@ -459,14 +452,19 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
                           margin: const EdgeInsets.only(bottom: 10),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(color: Colors.grey.shade200),
+                            side: BorderSide(
+                              color: isDark
+                                  ? Colors.white10
+                                  : Colors.grey.shade200,
+                            ),
                           ),
-                          color: Colors.white,
+                          color: isDark
+                              ? const Color(0xFF1E1E1E)
+                              : Colors.white,
                           child: Padding(
                             padding: const EdgeInsets.all(14),
                             child: Row(
                               children: [
-                                // Signal Icon
                                 Container(
                                   width: 50,
                                   height: 50,
@@ -494,7 +492,9 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
                                           fontWeight: FontWeight.bold,
                                           fontSize: 15,
                                           color: ap.ssid.isNotEmpty
-                                              ? Colors.black87
+                                              ? (isDark
+                                                    ? Colors.white
+                                                    : Colors.black87)
                                               : Colors.grey,
                                         ),
                                         overflow: TextOverflow.ellipsis,
@@ -508,12 +508,13 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
                                         ),
                                       ),
                                       const SizedBox(height: 8),
-                                      // Signal bar
                                       ClipRRect(
                                         borderRadius: BorderRadius.circular(5),
                                         child: LinearProgressIndicator(
                                           value: percent / 100,
-                                          backgroundColor: Colors.grey[200],
+                                          backgroundColor: isDark
+                                              ? Colors.white10
+                                              : Colors.grey[200],
                                           valueColor:
                                               AlwaysStoppedAnimation<Color>(
                                                 sigColor,
@@ -525,7 +526,6 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                // Right side info
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
@@ -577,7 +577,11 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
                                           vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.grey.shade100,
+                                          color: isDark
+                                              ? Colors.white.withValues(
+                                                  alpha: 0.05,
+                                                )
+                                              : Colors.grey.shade100,
                                           borderRadius: BorderRadius.circular(
                                             6,
                                           ),
@@ -587,7 +591,9 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
                                           style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.grey[700],
+                                            color: isDark
+                                                ? Colors.grey[400]
+                                                : Colors.grey[700],
                                           ),
                                         ),
                                       ),
@@ -634,6 +640,7 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
     Color color,
     IconData icon,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       children: [
         Icon(icon, color: color, size: 20),
@@ -646,7 +653,13 @@ class _WifiScannerPageState extends State<WifiScannerPage> {
             color: color,
           ),
         ),
-        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+          ),
+        ),
       ],
     );
   }
@@ -665,13 +678,11 @@ class _WifiCurvePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final double width = size.width;
-    final double height = size.height - 20; // Bottom space for labels
+    final double height = size.height - 20;
 
-    // Clip to chart area to prevent spill-over
     canvas.save();
     canvas.clipRect(Rect.fromLTWH(0, -20, width, height + 40));
 
-    // Define X range
     double minCh, maxCh;
     List<int> gridChannels;
 
@@ -689,7 +700,6 @@ class _WifiCurvePainter extends CustomPainter {
       gridChannels = [1, 50, 100, 150, 200];
     }
 
-    // Draw grid
     final gridPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.05)
       ..strokeWidth = 1;
@@ -700,7 +710,6 @@ class _WifiCurvePainter extends CustomPainter {
     for (var ch in gridChannels) {
       double x = (ch - minCh) / (maxCh - minCh) * width;
       canvas.drawLine(Offset(x, 0), Offset(x, height), gridPaint);
-
       textPainter.text = TextSpan(
         text: 'Ch $ch',
         style: TextStyle(
@@ -712,28 +721,21 @@ class _WifiCurvePainter extends CustomPainter {
       textPainter.paint(canvas, Offset(x - textPainter.width / 2, height + 4));
     }
 
-    // Draw Parabolas
     for (var ap in accessPoints) {
       int ch = _getChannel(ap.frequency);
       if (ch == 0) continue;
 
       double xCenter = (ch - minCh) / (maxCh - minCh) * width;
-      // Normalizing signal level (-100 to -30 dBm) to height, clamped
       double levelNormalized = ((ap.level + 100) / 70).clamp(0.0, 1.0);
       double h = math.max(10.0, levelNormalized * (height - 30));
-
-      // WiFi channel is ~22MHz wide. Spacing is 5MHz. -> 4.4 channel units wide.
-      // Half-width 'w' should be ~2.2 units.
       double wUnits = (bandType == _BandType.twoPointFour ? 2.2 : 2.0);
       double w = (wUnits / (maxCh - minCh)) * width;
 
-      // Unique color per AP based on BSSID
       final Color color = _getAPColor(ap.bssid);
       final Path path = Path();
       path.moveTo(xCenter - w, height);
       path.quadraticBezierTo(xCenter, height - h * 2, xCenter + w, height);
 
-      // Gradient Fill
       canvas.drawPath(
         path,
         Paint()
@@ -748,7 +750,6 @@ class _WifiCurvePainter extends CustomPainter {
           ..style = PaintingStyle.fill,
       );
 
-      // Stroke
       canvas.drawPath(
         path,
         Paint()
@@ -757,7 +758,6 @@ class _WifiCurvePainter extends CustomPainter {
           ..strokeWidth = 1.5,
       );
 
-      // SSID Name at peak
       if (ap.ssid.isNotEmpty) {
         textPainter.text = TextSpan(
           text: ap.ssid,
@@ -798,12 +798,12 @@ class _WifiCurvePainter extends CustomPainter {
       Colors.yellowAccent,
       Colors.tealAccent,
       Colors.redAccent,
-      Colors.indigoAccent,
-      Colors.amberAccent,
-      Colors.lightBlueAccent,
-      Colors.limeAccent,
     ];
-    return palette[bssid.hashCode.abs() % palette.length];
+    int hash = 0;
+    for (int i = 0; i < bssid.length; i++) {
+      hash = bssid.codeUnitAt(i) + ((hash << 5) - hash);
+    }
+    return palette[hash.abs() % palette.length];
   }
 
   @override

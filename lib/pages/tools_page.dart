@@ -14,7 +14,9 @@ class ToolsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       appBar: AppBar(
         title: const Text('All Tools'),
         backgroundColor: AppConstants.primaryColor,
@@ -26,14 +28,21 @@ class ToolsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Network Utilities',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
             ),
             const SizedBox(height: 10),
             Text(
               'A complete set of tools to manage and monitor your network.',
-              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+              style: TextStyle(
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                fontSize: 13,
+              ),
             ),
             const SizedBox(height: 20),
             GridView.count(
@@ -47,106 +56,114 @@ class ToolsPage extends StatelessWidget {
                 _buildMenuCard(
                   context,
                   'MikroTik Manager',
-                  'Manage your routers',
+                  'Manage routers',
                   Icons.router,
                   Colors.blue,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const RouterListPage(),
-                    ),
-                  ),
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const RouterListPage()),
+                    );
+                  },
                 ),
                 _buildMenuCard(
                   context,
                   'Ping Tool',
-                  'Check connectivity',
+                  'Check connect',
                   Icons.network_check,
                   Colors.orange,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PingToolPage(),
-                    ),
-                  ),
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PingToolPage()),
+                    );
+                  },
                 ),
                 _buildMenuCard(
                   context,
                   'IP Calculator',
-                  'Subnetting made easy',
+                  'Subnetting',
                   Icons.calculate,
                   Colors.green,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const IpCalculatorPage(),
-                    ),
-                  ),
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const IpCalculatorPage(),
+                      ),
+                    );
+                  },
                 ),
                 _buildMenuCard(
                   context,
-                  'Network Discovery',
-                  'Scan devices in network',
+                  'Discovery',
+                  'Scan devices',
                   Icons.radar,
                   Colors.purple,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const NetworkDiscoveryPage(),
-                    ),
-                  ),
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NetworkDiscoveryPage(),
+                      ),
+                    );
+                  },
                 ),
                 _buildMenuCard(
                   context,
                   'Port Scanner',
-                  'Check open ports',
+                  'Check ports',
                   Icons.search,
                   Colors.teal,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PortScannerPage(),
-                    ),
-                  ),
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PortScannerPage(),
+                      ),
+                    );
+                  },
                 ),
                 _buildMenuCard(
                   context,
                   'Wake-on-LAN',
-                  'Turn on computers',
+                  'Turn on PCs',
                   Icons.power_settings_new,
                   Colors.redAccent,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const WakeOnLanPage(),
-                    ),
-                  ),
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const WakeOnLanPage()),
+                    );
+                  },
                 ),
                 _buildMenuCard(
                   context,
                   'Traceroute',
-                  'Trace network path',
+                  'Trace path',
                   Icons.route,
                   Colors.indigo,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const TraceroutePage(),
-                    ),
-                  ),
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const TraceroutePage()),
+                    );
+                  },
                 ),
                 _buildMenuCard(
                   context,
                   'WiFi Scanner',
-                  'Scan nearby networks',
+                  'Scan nearby',
                   Icons.wifi_find,
                   Colors.cyan,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const WifiScannerPage(),
-                    ),
-                  ),
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const WifiScannerPage(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -165,52 +182,61 @@ class ToolsPage extends StatelessWidget {
     VoidCallback onTap, {
     bool isLocked = false,
   }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Colors.grey.shade100),
-      ),
-      color: isLocked ? Colors.grey.shade50 : Colors.white,
-      child: InkWell(
-        onTap: isLocked ? null : onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isLocked
-                      ? Colors.grey[200]
-                      : color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: isLocked ? Colors.grey : color,
-                  size: 24,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: isLocked ? Colors.grey : Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                isLocked ? 'Locked' : subtitle,
-                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-              ),
-            ],
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InkWell(
+      onTap: isLocked ? null : onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isLocked
+              ? (isDark ? Colors.white10 : Colors.grey.shade50)
+              : (isDark ? const Color(0xFF1E1E1E) : Colors.white),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black26
+                  : Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: isDark ? Colors.white10 : Colors.transparent,
           ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const Spacer(),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: isLocked
+                    ? Colors.grey
+                    : (isDark ? Colors.white : Colors.black87),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              isLocked ? 'Locked' : subtitle,
+              style: TextStyle(
+                fontSize: 10,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+          ],
         ),
       ),
     );

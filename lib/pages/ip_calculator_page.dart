@@ -39,21 +39,16 @@ class _IpCalculatorPageState extends State<IpCalculatorPage> {
         throw Exception('Invalid IP address');
       }
 
-      // 32-bit integer representation
       int ipInt =
           (ipParts[0] << 24) |
           (ipParts[1] << 16) |
           (ipParts[2] << 8) |
           ipParts[3];
-
-      // Mask calculation
       int maskInt = cidr == 0 ? 0 : (0xFFFFFFFF << (32 - cidr)) & 0xFFFFFFFF;
-
       int networkInt = ipInt & maskInt;
       int wildcardInt = ~maskInt & 0xFFFFFFFF;
       int broadcastInt = networkInt | wildcardInt;
 
-      // Detect IP Class
       String ipClass = 'Unknown';
       int firstOctet = ipParts[0];
       if (firstOctet >= 1 && firstOctet <= 126) {
@@ -68,17 +63,11 @@ class _IpCalculatorPageState extends State<IpCalculatorPage> {
         ipClass = 'E (Experimental)';
       }
 
-      // Detect Public vs Private
-      bool isPrivate = false;
-      if (firstOctet == 10) {
-        isPrivate = true;
-      } else if (firstOctet == 172 && (ipParts[1] >= 16 && ipParts[1] <= 31)) {
-        isPrivate = true;
-      } else if (firstOctet == 192 && ipParts[1] == 168) {
-        isPrivate = true;
-      } else if (firstOctet == 127) {
-        isPrivate = true; // Loopback
-      }
+      bool isPrivate =
+          (firstOctet == 10) ||
+          (firstOctet == 172 && (ipParts[1] >= 16 && ipParts[1] <= 31)) ||
+          (firstOctet == 192 && ipParts[1] == 168) ||
+          (firstOctet == 127);
 
       setState(() {
         _results = {
@@ -123,8 +112,9 @@ class _IpCalculatorPageState extends State<IpCalculatorPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       appBar: AppBar(
         title: const Text('IP Calculator'),
         backgroundColor: AppConstants.primaryColor,
@@ -144,7 +134,7 @@ class _IpCalculatorPageState extends State<IpCalculatorPage> {
             _buildHeader(),
             const SizedBox(height: 20),
             if (_results != null) _buildResultsList(),
-            const SizedBox(height: 100), // Space for button
+            const SizedBox(height: 100),
           ],
         ),
       ),
@@ -197,7 +187,6 @@ class _IpCalculatorPageState extends State<IpCalculatorPage> {
             ),
             child: TextField(
               controller: _inputController,
-              keyboardType: TextInputType.text,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -229,22 +218,25 @@ class _IpCalculatorPageState extends State<IpCalculatorPage> {
   }
 
   Widget _buildResultItem(String title, String value) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     bool isMain =
         title == 'Network' || title == 'Netmask' || title == 'Broadcast';
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(
           color: isMain
               ? AppConstants.primaryColor.withValues(alpha: 0.2)
-              : Colors.grey.shade100,
+              : (isDark ? Colors.white10 : Colors.grey.shade100),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: isDark
+                ? Colors.black26
+                : Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -260,7 +252,7 @@ class _IpCalculatorPageState extends State<IpCalculatorPage> {
                 title,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey[600],
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -270,7 +262,9 @@ class _IpCalculatorPageState extends State<IpCalculatorPage> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: isMain ? AppConstants.primaryColor : Colors.black87,
+                  color: isMain
+                      ? AppConstants.primaryColor
+                      : (isDark ? Colors.white : Colors.black87),
                 ),
               ),
             ],
@@ -279,7 +273,7 @@ class _IpCalculatorPageState extends State<IpCalculatorPage> {
             _getIconForTitle(title),
             color: isMain
                 ? AppConstants.primaryColor.withValues(alpha: 0.5)
-                : Colors.grey[300],
+                : (isDark ? Colors.white24 : Colors.grey[300]),
             size: 20,
           ),
         ],

@@ -7,13 +7,14 @@ import 'package:flutter/services.dart';
 import '../core/constants/app_constants.dart';
 import 'router_list_page.dart';
 import 'ping_tool_page.dart';
-import 'ip_calculator_page.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:http/http.dart' as http;
 import 'network_discovery_page.dart';
 import 'faq_page.dart';
 import 'privacy_policy_page.dart';
 import 'tools_page.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/theme_bloc.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -28,11 +29,9 @@ class _HomePageState extends State<HomePage> {
   Timer? _trafficTimer;
   double _upSpeed = 0.0;
   double _downSpeed = 0.0;
-  // Traffic variables for calculating speed
   int _lastRx = 0;
   int _lastTx = 0;
 
-  // Network Info State
   String _localIp = '...';
   String _publicIp = '...';
   String _gateway = '...';
@@ -51,7 +50,6 @@ class _HomePageState extends State<HomePage> {
     try {
       final ip = await _networkInfo.getWifiIP();
       final gateway = await _networkInfo.getWifiGatewayIP();
-      const subnet = 'Tidak Tersedia';
       final name = await _networkInfo.getWifiName();
 
       String pubIp = '...';
@@ -64,7 +62,6 @@ class _HomePageState extends State<HomePage> {
             .timeout(const Duration(seconds: 5));
         if (response.statusCode == 200) {
           pubIp = response.body;
-
           try {
             final infoResponse = await http
                 .get(Uri.parse('https://ipinfo.io/$pubIp/json'))
@@ -91,7 +88,6 @@ class _HomePageState extends State<HomePage> {
             'Local IP': _localIp,
             'Public IP': _publicIp,
             'Gateway': _gateway,
-            'Subnet Mask': subnet,
             'SSID': name ?? 'Tidak Tersedia',
             'ISP / Org': _isp,
             'Location': ispLocation,
@@ -103,32 +99,23 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           _localIp = 'Tidak Tersedia';
           _publicIp = 'Tidak Tersedia';
-          _gateway = 'Tidak Tersedia';
           _isp = 'N/A';
-          _fullNetInfo = {
-            'Local IP': _localIp,
-            'Public IP': _publicIp,
-            'Gateway': _gateway,
-            'Subnet Mask': 'Tidak Tersedia',
-            'SSID': 'Tidak Tersedia',
-            'ISP / Org': _isp,
-            'Location': 'N/A',
-          };
         });
       }
     }
   }
 
   void _showNetworkDetails() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(30),
             topRight: Radius.circular(30),
           ),
@@ -142,7 +129,7 @@ class _HomePageState extends State<HomePage> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: isDark ? Colors.white10 : Colors.grey[300],
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -159,9 +146,13 @@ class _HomePageState extends State<HomePage> {
                   child: const Icon(Icons.lan, color: Colors.blue),
                 ),
                 const SizedBox(width: 15),
-                const Text(
+                Text(
                   'Network Details',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
                 ),
               ],
             ),
@@ -186,7 +177,6 @@ class _HomePageState extends State<HomePage> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
-                  elevation: 0,
                 ),
                 child: const Text(
                   'Dismiss',
@@ -201,13 +191,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildDetailItem(String title, String value) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey[50],
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.grey.shade100,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,10 +209,10 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 15,
-              color: Colors.black87,
+              color: isDark ? Colors.white : Colors.black87,
             ),
           ),
         ],
@@ -230,60 +223,74 @@ class _HomePageState extends State<HomePage> {
   void _startRealTrafficMonitoring() {
     _trafficTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (!mounted) return;
-
       bool readSuccess = false;
-
       try {
+        int currentRx = 0;
+        int currentTx = 0;
+
         if (Platform.isAndroid || Platform.isLinux) {
           final file = File('/proc/net/dev');
           if (await file.exists()) {
             final lines = await file.readAsLines();
-            int currentRx = 0;
-            int currentTx = 0;
-
             for (final line in lines) {
-              if (line.contains('wlan') || line.contains('rmnet')) {
-                final cleanLine = line.split(':').last.trim();
-                final parts = cleanLine.split(RegExp(r'\s+'));
+              if (line.contains('wlan') ||
+                  line.contains('rmnet') ||
+                  line.contains('eth')) {
+                final parts = line.split(':').last.trim().split(RegExp(r'\s+'));
                 if (parts.length >= 8) {
-                  currentRx += int.tryParse(parts[0]) ?? 0; // Rx Bytes
-                  currentTx += int.tryParse(parts[8]) ?? 0; // Tx Bytes
+                  currentRx += int.tryParse(parts[0]) ?? 0;
+                  currentTx += int.tryParse(parts[8]) ?? 0;
                 }
               }
             }
-
-            if (_lastRx > 0 && _lastTx > 0) {
-              // Calculate Delta in KB/s
-              final double rxSpeed = (currentRx - _lastRx) / 1024.0;
-              final double txSpeed = (currentTx - _lastTx) / 1024.0;
-
-              setState(() {
-                _downSpeed = rxSpeed;
-                _upSpeed = txSpeed;
-
-                _downData.removeAt(0);
-                // Adjust scale factor based on typical speeds (max 100 on graph roughly)
-                _downData.add((_downSpeed / 50).clamp(0.0, 100.0));
-
-                _upData.removeAt(0);
-                _upData.add((_upSpeed / 20).clamp(0.0, 100.0));
-              });
+          }
+        } else if (Platform.isWindows) {
+          final result = await Process.run('netstat', ['-e']);
+          if (result.exitCode == 0) {
+            final lines = result.stdout.toString().split('\n');
+            for (final line in lines) {
+              if (line.contains('Bytes')) {
+                final parts = line.trim().split(RegExp(r'\s+'));
+                if (parts.length >= 3) {
+                  currentRx = int.tryParse(parts[1]) ?? 0;
+                  currentTx = int.tryParse(parts[2]) ?? 0;
+                }
+                break;
+              }
             }
-
-            _lastRx = currentRx;
-            _lastTx = currentTx;
-            readSuccess = true;
           }
         }
-      } catch (_) {}
 
-      // Fallback (or placeholder for Windows/iOS/Web emulator)
+        if (currentRx > 0 || currentTx > 0) {
+          if (_lastRx > 0 && _lastTx > 0) {
+            setState(() {
+              // Convert bytes delta to KB/s (since we run every 1 second)
+              _downSpeed = (currentRx - _lastRx).abs() / 1024.0;
+              _upSpeed = (currentTx - _lastTx).abs() / 1024.0;
+
+              // Handle counter reset or sudden spikes
+              if (_downSpeed > 100000) _downSpeed = 0;
+              if (_upSpeed > 100000) _upSpeed = 0;
+
+              _downData.removeAt(0);
+              _downData.add((_downSpeed / 50).clamp(0.0, 100.0));
+              _upData.removeAt(0);
+              _upData.add((_upSpeed / 20).clamp(0.0, 100.0));
+            });
+          }
+          _lastRx = currentRx;
+          _lastTx = currentTx;
+          readSuccess = true;
+        }
+      } catch (e) {
+        debugPrint('Traffic Monitor Error: $e');
+      }
+
       if (!readSuccess && mounted) {
         setState(() {
           _downSpeed = 5 + Random().nextDouble() * 20;
           _downData.removeAt(0);
           _downData.add(_downSpeed / 5);
-
           _upSpeed = 1 + Random().nextDouble() * 5;
           _upData.removeAt(0);
           _upData.add(_upSpeed / 5);
@@ -298,37 +305,11 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  Future<bool?> _showExitConfirmation(BuildContext context) {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Exit App'),
-        content: const Text('Are you sure you want to exit the application?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('No', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Yes, Exit'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showSettingsMenu() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -336,16 +317,26 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
-              padding: EdgeInsets.all(16.0),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
               child: Text(
                 'Settings & Info',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.help_outline),
-              title: const Text('FAQ'),
+              leading: Icon(
+                Icons.help_outline,
+                color: isDark ? Colors.white70 : Colors.black54,
+              ),
+              title: Text(
+                'Settings & FAQ',
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -355,8 +346,14 @@ class _HomePageState extends State<HomePage> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.privacy_tip_outlined),
-              title: const Text('Privacy Policy'),
+              leading: Icon(
+                Icons.privacy_tip_outlined,
+                color: isDark ? Colors.white70 : Colors.black54,
+              ),
+              title: Text(
+                'Privacy Policy',
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -367,10 +364,19 @@ class _HomePageState extends State<HomePage> {
                 );
               },
             ),
-            const ListTile(
-              leading: Icon(Icons.info_outline),
-              title: Text('App Version (Build Info)'),
-              trailing: Text('0.1.0+1', style: TextStyle(color: Colors.grey)),
+            ListTile(
+              leading: Icon(
+                Icons.info_outline,
+                color: isDark ? Colors.white70 : Colors.black54,
+              ),
+              title: Text(
+                'App Version',
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+              ),
+              trailing: const Text(
+                '1.0.0+1',
+                style: TextStyle(color: Colors.grey),
+              ),
             ),
           ],
         ),
@@ -380,177 +386,203 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        final shouldPop = await _showExitConfirmation(context);
-        if (shouldPop ?? false) {
-          SystemNavigator.pop();
-        }
+        final shouldPop = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+            title: Text(
+              'Exit App',
+              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+            ),
+            content: Text(
+              'Are you sure?',
+              style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('No'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                ),
+                child: const Text(
+                  'Exit',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+        if (shouldPop ?? false) SystemNavigator.pop();
       },
       child: Scaffold(
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppConstants.primaryColor,
-                AppConstants.primaryColor.withValues(alpha: 0.8),
-                Colors.blue.shade900,
-              ],
-            ),
-          ),
-          child: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
-                      ),
-                    ),
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 30),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Tools & Features',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const ToolsPage(),
-                                    ),
-                                  );
-                                },
-                                child: const Text(
-                                  'See All',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            ],
+        backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
+        body: SingleChildScrollView(
+          child: Column(
+            children: [
+              _buildHeader(context),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Tools & Features',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black87,
                           ),
-                          const SizedBox(height: 10),
-                          _buildMenuGrid(context),
-                          const SizedBox(height: 30),
-                          _buildRecentActivity(),
-                          const SizedBox(height: 30),
-                          _buildTrafficMonitor(),
-                          const SizedBox(height: 30),
-                        ],
-                      ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ToolsPage(),
+                            ),
+                          ),
+                          child: const Text('See All'),
+                        ),
+                      ],
                     ),
-                  ),
+                    const SizedBox(height: 15),
+                    _buildMenuGrid(context),
+                    const SizedBox(height: 30),
+                    _buildRecentActivity(context),
+                    const SizedBox(height: 30),
+                    _buildTrafficInsights(context),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(25.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppConstants.primaryColor,
+            AppConstants.primaryColor.withValues(alpha: 0.8),
+            Colors.blue.shade900,
+          ],
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(25.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      image: const DecorationImage(
-                        image: AssetImage('assets/images/logo.png'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      Text(
-                        'Welcome Back',
-                        style: TextStyle(color: Colors.white70, fontSize: 16),
-                      ),
-                      Text(
-                        'Mikrotik Hub',
-                        style: TextStyle(
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
                           color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
+                          borderRadius: BorderRadius.circular(15),
                         ),
+                        child: const Icon(
+                          Icons.hub,
+                          color: AppConstants.primaryColor,
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Welcome Back',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            'MikroTik Hub',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      BlocBuilder<ThemeBloc, ThemeState>(
+                        builder: (context, state) {
+                          final isDark = state.themeMode == ThemeMode.dark;
+                          return IconButton(
+                            icon: Icon(
+                              isDark ? Icons.light_mode : Icons.dark_mode,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {
+                              context.read<ThemeBloc>().add(ToggleThemeEvent());
+                            },
+                            tooltip: 'Toggle Theme',
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.settings, color: Colors.white),
+                        onPressed: _showSettingsMenu,
+                        tooltip: 'Settings',
                       ),
                     ],
                   ),
                 ],
               ),
+              const SizedBox(height: 20),
               Container(
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.2),
+                  ),
                 ),
-                child: IconButton(
-                  icon: const Icon(Icons.settings, color: Colors.white),
-                  onPressed: _showSettingsMenu,
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.white70),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Monitor and manage your network tools in one tap.',
+                        style: TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.white70),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Efficiently manage your MikroTik vouchers and networks in one place.',
-                    style: TextStyle(color: Colors.white, fontSize: 13),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -566,8 +598,8 @@ class _HomePageState extends State<HomePage> {
       children: [
         _buildMenuCard(
           context,
-          'MikroTik Manager',
-          'Manage your routers',
+          'MikroTik',
+          'Manage routers',
           Icons.router,
           Colors.blue,
           () => Navigator.push(
@@ -578,7 +610,7 @@ class _HomePageState extends State<HomePage> {
         _buildMenuCard(
           context,
           'Ping Tool',
-          'Check connectivity',
+          'Check connect',
           Icons.network_check,
           Colors.orange,
           () => Navigator.push(
@@ -588,19 +620,8 @@ class _HomePageState extends State<HomePage> {
         ),
         _buildMenuCard(
           context,
-          'IP Calculator',
-          'Subnetting made easy',
-          Icons.calculate,
-          Colors.green,
-          () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const IpCalculatorPage()),
-          ),
-        ),
-        _buildMenuCard(
-          context,
-          'Network Discovery',
-          'Scan devices in network',
+          'Discovery',
+          'Scan devices',
           Icons.radar,
           Colors.purple,
           () => Navigator.push(
@@ -608,6 +629,17 @@ class _HomePageState extends State<HomePage> {
             MaterialPageRoute(
               builder: (context) => const NetworkDiscoveryPage(),
             ),
+          ),
+        ),
+        _buildMenuCard(
+          context,
+          'Tools',
+          'More tools',
+          Icons.grid_view_rounded,
+          Colors.green,
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ToolsPage()),
           ),
         ),
       ],
@@ -620,301 +652,306 @@ class _HomePageState extends State<HomePage> {
     String subtitle,
     IconData icon,
     Color color,
-    VoidCallback onTap, {
-    bool isLocked = false,
-  }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Colors.grey.shade100),
-      ),
-      color: isLocked ? Colors.grey.shade50 : Colors.white,
-      child: InkWell(
-        onTap: isLocked ? null : onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isLocked
-                      ? Colors.grey[200]
-                      : color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: isLocked ? Colors.grey : color,
-                  size: 24,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: isLocked ? Colors.grey : Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                isLocked ? 'Locked' : subtitle,
-                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-              ),
-            ],
+    VoidCallback onTap,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black26
+                  : Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: isDark ? Colors.white10 : Colors.transparent,
           ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const Spacer(),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildRecentActivity() {
+  Widget _buildRecentActivity(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Network Info',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: isDark ? Colors.white : Colors.black87,
               ),
             ),
             TextButton(
               onPressed: _showNetworkDetails,
-              child: const Text('Details', style: TextStyle(fontSize: 12)),
+              child: const Text('Details'),
             ),
           ],
         ),
         const SizedBox(height: 10),
-        InkWell(
-          onTap: _showNetworkDetails,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.blue.shade100),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.blue.withValues(alpha: 0.05)
+                : Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isDark
+                  ? Colors.blue.withValues(alpha: 0.2)
+                  : Colors.blue.shade100,
             ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildSimpleStat('Local IP', _localIp),
-                    _buildDivider(),
-                    _buildSimpleStat('Public IP', _publicIp),
-                  ],
-                ),
-                const SizedBox(height: 15),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildSimpleStat(context, 'Local IP', _localIp),
+                  Container(
+                    height: 30,
+                    width: 1,
+                    color: isDark ? Colors.white10 : Colors.blue.shade100,
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.business,
-                        size: 16,
-                        color: Colors.blue.shade700,
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          _isp,
-                          style: TextStyle(
-                            color: Colors.blue.shade800,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+                  _buildSimpleStat(context, 'Public IP', _publicIp),
+                ],
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildTrafficMonitor() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Network Monitor',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  Text(
-                    'Real-time traffic',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                ],
-              ),
-              Icon(Icons.insights, color: Colors.blue, size: 20),
-            ],
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 100,
-            width: double.infinity,
-            child: CustomPaint(painter: TrafficPainter(_upData, _downData)),
-          ),
-          const SizedBox(height: 15),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildSpeedBadge(Icons.arrow_downward, _downSpeed, Colors.blue),
-              const SizedBox(width: 15),
-              _buildSpeedBadge(Icons.arrow_upward, _upSpeed, Colors.green),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSpeedBadge(IconData icon, double speed, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 4),
-          Text(
-            '${speed.toStringAsFixed(1)} kbps',
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSimpleStat(String label, String value) {
+  Widget _buildSimpleStat(BuildContext context, String label, String value) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.blue,
-          ),
-        ),
-        const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
             fontSize: 10,
-            color: Colors.blue.shade300,
-            fontWeight: FontWeight.w500,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.blue[300] : Colors.blue.shade700,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildDivider() {
-    return Container(height: 30, width: 1, color: Colors.blue.shade100);
+  Widget _buildTrafficInsights(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Traffic Monitor',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 15),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? Colors.black26
+                    : Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            border: Border.all(
+              color: isDark ? Colors.white10 : Colors.transparent,
+            ),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  _buildTrafficStat(
+                    context,
+                    'DOWNLOAD',
+                    _downSpeed.toStringAsFixed(1),
+                    'MB/s',
+                    Colors.orange,
+                  ),
+                  const Spacer(),
+                  _buildTrafficStat(
+                    context,
+                    'UPLOAD',
+                    _upSpeed.toStringAsFixed(1),
+                    'MB/s',
+                    Colors.blue,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 25),
+              SizedBox(
+                height: 100,
+                child: CustomPaint(
+                  painter: TrafficChartPainter(
+                    upData: _upData,
+                    downData: _downData,
+                    gridColor: isDark ? Colors.white10 : Colors.grey.shade100,
+                  ),
+                  size: Size.infinite,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTrafficStat(
+    BuildContext context,
+    String label,
+    String value,
+    String unit,
+    Color color,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+          ),
+        ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              unit,
+              style: TextStyle(
+                fontSize: 10,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }
 
-class TrafficPainter extends CustomPainter {
+class TrafficChartPainter extends CustomPainter {
   final List<double> upData;
   final List<double> downData;
-
-  TrafficPainter(this.upData, this.downData);
+  final Color gridColor;
+  TrafficChartPainter({
+    required this.upData,
+    required this.downData,
+    required this.gridColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    _drawData(canvas, size, downData, Colors.blue);
-    _drawData(canvas, size, upData, Colors.green);
+    final Paint gridPaint = Paint()
+      ..color = gridColor
+      ..strokeWidth = 1.0;
+    for (int i = 0; i <= 4; i++) {
+      double y = size.height * (i / 4);
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    _drawData(canvas, size, upData, Colors.blue);
+    _drawData(canvas, size, downData, Colors.orange);
   }
 
   void _drawData(Canvas canvas, Size size, List<double> data, Color color) {
-    if (data.length < 2) return;
-
-    final paint = Paint()
-      ..color = color.withValues(alpha: 0.8)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.round;
-
-    final fillPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.0)],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
     final path = Path();
     final stepX = size.width / (data.length - 1);
-
-    path.moveTo(0, size.height - data[0]);
-
-    for (int i = 1; i < data.length; i++) {
-      path.lineTo(i * stepX, size.height - data[i]);
+    for (int i = 0; i < data.length; i++) {
+      double x = i * stepX;
+      double y = size.height - (data[i] * size.height / 100);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
     }
-
-    final fillPath = Path.from(path);
-    fillPath.lineTo(size.width, size.height);
-    fillPath.lineTo(0, size.height);
-    fillPath.close();
-
-    canvas.drawPath(fillPath, fillPaint);
-    canvas.drawPath(path, paint);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
   }
 
   @override
-  bool shouldRepaint(TrafficPainter oldDelegate) => true;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

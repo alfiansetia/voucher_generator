@@ -257,8 +257,9 @@ class _TraceroutePageState extends State<TraceroutePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       appBar: AppBar(
         title: const Text('Traceroute'),
         backgroundColor: AppConstants.primaryColor,
@@ -266,49 +267,69 @@ class _TraceroutePageState extends State<TraceroutePage> {
         elevation: 0,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildTopInput(),
-              _buildStatsGrid(),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                child: Row(
+        child: Column(
+          children: [
+            _buildTopInput(),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
                   children: [
-                    const Icon(Icons.route, size: 16, color: Colors.grey),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'HOP RESULTS',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                        letterSpacing: 1,
+                    _buildStatsGrid(),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.route,
+                            size: 16,
+                            color: isDark ? Colors.white38 : Colors.grey,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'HOP RESULTS',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white38 : Colors.grey,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (_isTracing) ...[
+                            SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppConstants.primaryColor,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Tracing...',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark
+                                    ? AppConstants.primaryColor
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    const Spacer(),
-                    if (_isTracing) ...[
-                      const SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Tracing...',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
+                    _buildHopList(),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
-              SizedBox(height: 360, child: _buildHopList()),
-              _buildActionButton(),
-            ],
-          ),
+            ),
+            _buildActionButton(),
+          ],
         ),
       ),
     );
@@ -382,19 +403,22 @@ class _TraceroutePageState extends State<TraceroutePage> {
   }
 
   Widget _buildStatCard(String label, String value, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.05),
+            color: isDark ? Colors.black26 : color.withValues(alpha: 0.05),
             blurRadius: 10,
             spreadRadius: 2,
           ),
         ],
-        border: Border.all(color: color.withValues(alpha: 0.1)),
+        border: Border.all(
+          color: isDark ? Colors.white10 : color.withValues(alpha: 0.1),
+        ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -403,7 +427,7 @@ class _TraceroutePageState extends State<TraceroutePage> {
             label,
             style: TextStyle(
               fontSize: 10,
-              color: Colors.grey[600],
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -424,32 +448,44 @@ class _TraceroutePageState extends State<TraceroutePage> {
   }
 
   Widget _buildHopList() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.grey.shade200,
+        ),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: _hops.isEmpty && !_isTracing
-            ? Center(
+            ? Container(
+                height: 200,
+                alignment: Alignment.center,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.route, size: 48, color: Colors.grey[300]),
+                    Icon(
+                      Icons.route,
+                      size: 48,
+                      color: isDark ? Colors.white10 : Colors.grey[300],
+                    ),
                     const SizedBox(height: 10),
-                    const Text(
+                    Text(
                       'No hops yet.\nEnter a target and press Trace.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(
+                        color: isDark ? Colors.grey[600] : Colors.grey,
+                      ),
                     ),
                   ],
                 ),
               )
             : ListView.builder(
-                controller: _scrollController,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(10),
                 itemCount: _hops.length,
                 itemBuilder: (context, index) {
@@ -469,10 +505,14 @@ class _TraceroutePageState extends State<TraceroutePage> {
                       vertical: 10,
                     ),
                     decoration: BoxDecoration(
-                      color: rowColor.withValues(alpha: 0.05),
+                      color: isDark
+                          ? rowColor.withValues(alpha: 0.05)
+                          : rowColor.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: rowColor.withValues(alpha: 0.15),
+                        color: isDark
+                            ? rowColor.withValues(alpha: 0.2)
+                            : rowColor.withValues(alpha: 0.15),
                       ),
                     ),
                     child: Row(
@@ -506,7 +546,9 @@ class _TraceroutePageState extends State<TraceroutePage> {
                                   fontSize: 13,
                                   color: isTimeout
                                       ? Colors.red[700]
-                                      : Colors.black87,
+                                      : (isDark
+                                            ? Colors.white
+                                            : Colors.black87),
                                 ),
                               ),
                               if (!isTimeout && hop.hostname != null)
@@ -514,7 +556,9 @@ class _TraceroutePageState extends State<TraceroutePage> {
                                   hop.ip,
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: Colors.grey[600],
+                                    color: isDark
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
                                   ),
                                 ),
                               if (isDestination)
@@ -522,7 +566,9 @@ class _TraceroutePageState extends State<TraceroutePage> {
                                   '✓ Destination Reached',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: Colors.green[700],
+                                    color: isDark
+                                        ? Colors.green[400]
+                                        : Colors.green[700],
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

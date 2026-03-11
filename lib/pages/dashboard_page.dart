@@ -49,6 +49,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return BlocListener<MikrotikBloc, MikrotikState>(
       listener: (context, state) {
         if (state is MikrotikDisconnected) {
@@ -67,6 +68,7 @@ class _DashboardPageState extends State<DashboardPage> {
         }
       },
       child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
         appBar: AppBar(
           title: const Text('Dashboard'),
           backgroundColor: AppConstants.primaryColor,
@@ -85,11 +87,12 @@ class _DashboardPageState extends State<DashboardPage> {
                 children: [
                   Row(
                     children: [
-                      const Text(
+                      Text(
                         'System Statistics',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
                       const SizedBox(width: 8),

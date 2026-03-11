@@ -24,6 +24,7 @@ dependencies:
   internet_speed_meter: ^1.0.3
   wifi_scan: ^0.4.1+2
   permission_handler: ^12.0.1
+  shared_preferences: ^2.5.4
   
 
 dev_dependencies:

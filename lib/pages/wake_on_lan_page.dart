@@ -96,75 +96,177 @@ class _WakeOnLanPageState extends State<WakeOnLanPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       appBar: AppBar(
         title: const Text('Wake-on-LAN'),
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Wake up devices remotely',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Send a "Magic Packet" to power on a computer inside your network. Ensure the target computer has Wake-on-LAN enabled in its BIOS.',
-              style: TextStyle(color: Colors.grey[700]),
-            ),
-            const SizedBox(height: 30),
-            TextField(
-              controller: _macController,
-              decoration: InputDecoration(
-                labelText: 'Target MAC Address',
-                hintText: 'e.g., 00:1A:2B:3C:4D:5E',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                prefixIcon: const Icon(Icons.settings_ethernet),
-              ),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _ipController,
-              decoration: InputDecoration(
-                labelText: 'Broadcast IP Address',
-                hintText: '255.255.255.255',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                prefixIcon: const Icon(Icons.cast_connected),
-              ),
-            ),
-            const SizedBox(height: 40),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton.icon(
-                onPressed: _isSending ? null : _sendMagicPacket,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppConstants.primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                icon: _isSending
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Icon(Icons.power_settings_new),
-                label: const Text(
-                  'SEND MAGIC PACKET',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
+            _buildHeader(),
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                children: [
+                  _buildInputCard(),
+                  const SizedBox(height: 30),
+                  _buildInstructions(),
+                ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(25),
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: AppConstants.primaryColor,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Wake up remote devices',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 5),
+          Text(
+            'Send a magic packet to a specific network device.',
+            style: TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black26 : Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: isDark ? Colors.white10 : Colors.transparent),
+      ),
+      child: Column(
+        children: [
+          TextField(
+            controller: _macController,
+            enabled: !_isSending,
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+            decoration: InputDecoration(
+              labelText: 'MAC Address',
+              labelStyle: TextStyle(
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+              hintText: 'AA:BB:CC:DD:EE:FF',
+              hintStyle: TextStyle(
+                color: isDark ? Colors.white24 : Colors.grey[300],
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              prefixIcon: const Icon(
+                Icons.important_devices,
+                color: AppConstants.primaryColor,
+              ),
+            ),
+          ),
+          const SizedBox(height: 15),
+          TextField(
+            controller: _ipController,
+            enabled: !_isSending,
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+            decoration: InputDecoration(
+              labelText: 'Broadcast Address',
+              labelStyle: TextStyle(
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+              hintText: '255.255.255.255',
+              hintStyle: TextStyle(
+                color: isDark ? Colors.white24 : Colors.grey[300],
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              prefixIcon: const Icon(
+                Icons.sensors,
+                color: AppConstants.primaryColor,
+              ),
+            ),
+          ),
+          const SizedBox(height: 25),
+          SizedBox(
+            width: double.infinity,
+            height: 55,
+            child: ElevatedButton(
+              onPressed: _isSending ? null : _sendMagicPacket,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+              child: _isSending
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text(
+                      'WAKE UP DEVICE',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstructions() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Important:',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white70 : Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          'Ensure the target computer has Wake-on-LAN enabled in its BIOS/UEFI settings and network adapter properties. It must also be connected via Ethernet.',
+          style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700]),
+        ),
+      ],
     );
   }
 }

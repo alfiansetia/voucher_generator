@@ -18,7 +18,6 @@ class _PingDialogState extends State<PingDialog> {
   final ScrollController _scrollController = ScrollController();
   bool _isPinging = false;
 
-  // Real-time calculation helpers
   int _transmitted = 0;
   int _received = 0;
   int _lost = 0;
@@ -58,8 +57,6 @@ class _PingDialogState extends State<PingDialog> {
           if (res.time != null) {
             _received++;
             final ms = res.time!.inMilliseconds;
-
-            // Stats updates
             _minTime = (_minTime == null || ms < _minTime!) ? ms : _minTime;
             _maxTime = (_maxTime == null || ms > _maxTime!) ? ms : _maxTime;
             _avgTime = (_avgTime == null)
@@ -69,13 +66,11 @@ class _PingDialogState extends State<PingDialog> {
             _lost++;
           }
         }
-
         if (event.summary != null) {
           _isPinging = false;
         }
       });
 
-      // Auto scroll only if user is at the bottom
       Timer(const Duration(milliseconds: 100), () {
         if (_scrollController.hasClients) {
           _scrollController.animateTo(
@@ -104,7 +99,10 @@ class _PingDialogState extends State<PingDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AlertDialog(
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+      surfaceTintColor: Colors.transparent,
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -112,15 +110,19 @@ class _PingDialogState extends State<PingDialog> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Network Diagnostic',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
                 ),
                 Text(
                   'Target: ${widget.ip}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey,
+                    color: isDark ? Colors.grey[500] : Colors.grey,
                     fontWeight: FontWeight.normal,
                   ),
                 ),
@@ -128,7 +130,10 @@ class _PingDialogState extends State<PingDialog> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close, color: Colors.grey),
+            icon: Icon(
+              Icons.close,
+              color: isDark ? Colors.white54 : Colors.grey,
+            ),
             onPressed: () => Navigator.pop(context),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -153,12 +158,20 @@ class _PingDialogState extends State<PingDialog> {
               child: Container(
                 height: 250,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.2)
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.1)),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white10
+                        : Colors.blue.withValues(alpha: .1),
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
+                      color: isDark
+                          ? Colors.black26
+                          : Colors.black.withValues(alpha: 0.02),
                       blurRadius: 10,
                       spreadRadius: 2,
                     ),
@@ -175,9 +188,11 @@ class _PingDialogState extends State<PingDialog> {
                               color: Colors.blue.withValues(alpha: 0.3),
                             ),
                             const SizedBox(height: 8),
-                            const Text(
+                            Text(
                               'Ready to Start Diagnostic',
-                              style: TextStyle(color: Colors.grey),
+                              style: TextStyle(
+                                color: isDark ? Colors.grey[600] : Colors.grey,
+                              ),
                             ),
                           ],
                         ),
@@ -200,8 +215,12 @@ class _PingDialogState extends State<PingDialog> {
                             ),
                             decoration: BoxDecoration(
                               color: isSuccess
-                                  ? Colors.green.withValues(alpha: 0.05)
-                                  : Colors.red.withValues(alpha: 0.05),
+                                  ? Colors.green.withValues(
+                                      alpha: isDark ? 0.15 : 0.05,
+                                    )
+                                  : Colors.red.withValues(
+                                      alpha: isDark ? 0.15 : 0.05,
+                                    ),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
@@ -214,9 +233,12 @@ class _PingDialogState extends State<PingDialog> {
                                 const SizedBox(width: 12),
                                 Text(
                                   'Seq ${res.seq}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w500,
                                     fontSize: 13,
+                                    color: isDark
+                                        ? Colors.white
+                                        : Colors.black87,
                                   ),
                                 ),
                                 const Spacer(),
@@ -226,8 +248,12 @@ class _PingDialogState extends State<PingDialog> {
                                       : 'Timed Out',
                                   style: TextStyle(
                                     color: isSuccess
-                                        ? Colors.blue[700]
-                                        : Colors.red[700],
+                                        ? (isDark
+                                              ? Colors.blueAccent
+                                              : Colors.blue[700])
+                                        : (isDark
+                                              ? Colors.redAccent
+                                              : Colors.red[700]),
                                     fontWeight: FontWeight.bold,
                                     fontSize: 13,
                                   ),
@@ -285,7 +311,6 @@ class _PingDialogState extends State<PingDialog> {
     final lossPercent = _transmitted == 0
         ? 0
         : (_lost / _transmitted * 100).toInt();
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -354,13 +379,16 @@ class _PingDialogState extends State<PingDialog> {
   }
 
   Widget _buildSmallStat(String label, String value) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.blue.withValues(alpha: 0.1)),
+          border: Border.all(
+            color: isDark ? Colors.white10 : Colors.blue.withValues(alpha: 0.1),
+          ),
         ),
         child: Column(
           children: [
@@ -378,7 +406,7 @@ class _PingDialogState extends State<PingDialog> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: Colors.blue[800],
+                color: isDark ? Colors.blueAccent : Colors.blue[800],
               ),
             ),
           ],

@@ -86,6 +86,9 @@ class RouterListPage extends StatelessWidget {
         }
       },
       child: Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF121212)
+            : Colors.grey[50],
         appBar: AppBar(
           title: const Text(AppConstants.routerListTitle),
           leading: IconButton(

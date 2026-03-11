@@ -108,104 +108,160 @@ class _PortScannerPageState extends State<PortScannerPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Sort results to show open ports at the top
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final sortedResults = List<Map<String, dynamic>>.from(_results)
       ..sort((a, b) => (a['open'] == b['open']) ? 0 : (a['open'] ? -1 : 1));
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       appBar: AppBar(
         title: const Text('Port Scanner'),
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _ipController,
-              decoration: InputDecoration(
-                labelText: 'Target IP Address',
-                hintText: 'e.g., 192.168.1.1',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                prefixIcon: const Icon(Icons.computer),
-              ),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+      body: Column(
+        children: [
+          _buildTopInput(),
+          if (_isScanning)
+            LinearProgressIndicator(
+              value: _progress,
+              backgroundColor: isDark ? Colors.white10 : Colors.blue.shade50,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isDark ? Colors.blue[400]! : AppConstants.primaryColor,
               ),
             ),
-            const SizedBox(height: 20),
-            if (_isScanning || _progress > 0)
-              Column(
-                children: [
-                  LinearProgressIndicator(value: _progress),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${(_progress * 100).toInt()}% scanned',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: sortedResults.isEmpty && !_isScanning
-                  ? const Center(
-                      child: Text(
-                        'Enter an IP and press Scan to find open ports.',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: sortedResults.length,
-                      itemBuilder: (context, index) {
-                        final r = sortedResults[index];
-                        final isOpen = r['open'] as bool;
-                        return Card(
-                          color: isOpen
-                              ? Colors.green.shade50
-                              : Colors.red.shade50,
-                          child: ListTile(
-                            leading: Icon(
-                              isOpen ? Icons.lock_open : Icons.lock,
-                              color: isOpen ? Colors.green : Colors.red,
+          Expanded(
+            child: sortedResults.isEmpty && !_isScanning
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search,
+                          size: 48,
+                          color: isDark ? Colors.white10 : Colors.grey[300],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Enter an IP and press Scan to find open ports.',
+                          style: TextStyle(
+                            color: isDark ? Colors.grey[600] : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(20),
+                    itemCount: sortedResults.length,
+                    itemBuilder: (context, index) {
+                      final r = sortedResults[index];
+                      final isOpen = r['open'] as bool;
+                      final Color color = isOpen ? Colors.green : Colors.red;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(15),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF1E1E1E)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(
+                            color: color.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isOpen ? Icons.lock_open : Icons.lock,
+                                color: color,
+                                size: 20,
+                              ),
                             ),
-                            title: Text(
+                            const SizedBox(width: 15),
+                            Text(
                               'Port ${r['port']}',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: isOpen
-                                    ? Colors.green.shade900
-                                    : Colors.red.shade900,
+                                color: isDark ? Colors.white : Colors.black87,
                               ),
                             ),
-                            trailing: Text(
+                            const Spacer(),
+                            Text(
                               isOpen ? 'OPEN' : 'CLOSED',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: isOpen ? Colors.green : Colors.red,
+                                color: color,
+                                fontSize: 12,
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _isScanning ? _stopScan : _scanPorts,
-        backgroundColor: _isScanning ? Colors.red : AppConstants.primaryColor,
+        backgroundColor: _isScanning
+            ? Colors.redAccent
+            : AppConstants.primaryColor,
         icon: Icon(
           _isScanning ? Icons.stop : Icons.search,
           color: Colors.white,
         ),
         label: Text(
           _isScanning ? 'STOP' : 'SCAN PORTS',
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  Widget _buildTopInput() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppConstants.primaryColor,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+            ),
+            child: TextField(
+              controller: _ipController,
+              enabled: !_isScanning,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                hintText: 'Enter IP address...',
+                hintStyle: TextStyle(color: Colors.white54),
+                border: InputBorder.none,
+                prefixIcon: Icon(Icons.lan, color: Colors.white70),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
