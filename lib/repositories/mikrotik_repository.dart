@@ -67,7 +67,7 @@ class MikrotikRepository {
     final Map<String, String> data = {};
 
     // Helper untuk menjalankan perintah secara aman dengan format Map arguments
-    Future<void> _safeTalk(
+    Future<void> safeTalk(
       String label,
       String command, {
       Map<String, String>? args,
@@ -75,7 +75,7 @@ class MikrotikRepository {
     }) async {
       try {
         final res = await _client!.talk(command, args ?? {});
-        print('Mikrotik Raw Response ($label): $res');
+        // print('Mikrotik Raw Response ($label): $res');
 
         if (res.isNotEmpty) {
           if (isCount) {
@@ -92,21 +92,21 @@ class MikrotikRepository {
         }
       } catch (e) {
         if (isCount) data[label] = '0';
-        print('Mikrotik Stats Error ($label): $e');
+        // print('Mikrotik Stats Error ($label): $e');
       }
     }
 
     // 1. Get System Resources
-    await _safeTalk('system', '/system/resource/print');
+    await safeTalk('system', '/system/resource/print');
 
     // 2. Get Hotspot Stats
-    await _safeTalk(
+    await safeTalk(
       'hotspot-users-total',
       '/ip/hotspot/user/print',
       args: {'count-only': ''},
       isCount: true,
     );
-    await _safeTalk(
+    await safeTalk(
       'hotspot-users-active',
       '/ip/hotspot/active/print',
       args: {'count-only': ''},
@@ -114,13 +114,13 @@ class MikrotikRepository {
     );
 
     // 3. Get PPP Stats
-    await _safeTalk(
+    await safeTalk(
       'ppp-secrets-total',
       '/ppp/secret/print',
       args: {'count-only': ''},
       isCount: true,
     );
-    await _safeTalk(
+    await safeTalk(
       'ppp-active-total',
       '/ppp/active/print',
       args: {'count-only': ''},

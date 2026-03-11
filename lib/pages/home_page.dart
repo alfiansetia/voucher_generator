@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_constants.dart';
 import 'router_list_page.dart';
+import 'ping_tool_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -157,11 +158,10 @@ class HomePage extends StatelessWidget {
           'Check connectivity',
           Icons.network_check,
           Colors.orange,
-          () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Ping Tool coming soon!')),
-            );
-          },
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const PingToolPage()),
+          ),
         ),
         _buildMenuCard(
           context,
