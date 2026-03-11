@@ -5,6 +5,8 @@ import 'package:network_info_plus/network_info_plus.dart';
 import '../core/constants/app_constants.dart';
 import 'home_page.dart';
 import '../components/ping_dialog.dart';
+import 'port_scanner_page.dart';
+import 'wake_on_lan_page.dart';
 
 class NetworkDiscoveryPage extends StatefulWidget {
   const NetworkDiscoveryPage({super.key});
@@ -268,6 +270,105 @@ class _NetworkDiscoveryPageState extends State<NetworkDiscoveryPage> {
     );
   }
 
+  void _showDeviceOptions(
+    BuildContext context,
+    String address,
+    String deviceName,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.devices, color: Colors.blue),
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          deviceName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          address,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.network_ping, color: Colors.orange),
+              title: const Text('Ping Device'),
+              onTap: () {
+                Navigator.pop(context);
+                showDialog(
+                  context: context,
+                  builder: (context) => PingDialog(ip: address),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.search, color: Colors.teal),
+              title: const Text('Scan Open Ports'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PortScannerPage(initialIp: address),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.power_settings_new,
+                color: Colors.redAccent,
+              ),
+              title: const Text('Wake-on-LAN'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => WakeOnLanPage(initialIp: address),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildDeviceList() {
     return ListView.builder(
       padding: const EdgeInsets.all(15),
@@ -283,12 +384,7 @@ class _NetworkDiscoveryPageState extends State<NetworkDiscoveryPage> {
         }
 
         return GestureDetector(
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (context) => PingDialog(ip: address),
-            );
-          },
+          onTap: () => _showDeviceOptions(context, address, deviceName),
           child: Card(
             key: ValueKey(address),
             elevation: 0,

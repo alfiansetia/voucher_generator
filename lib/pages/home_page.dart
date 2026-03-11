@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import 'network_discovery_page.dart';
 import 'faq_page.dart';
 import 'privacy_policy_page.dart';
+import 'tools_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -423,15 +424,37 @@ class _HomePageState extends State<HomePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 30),
-                          const Text(
-                            'Tools & Features',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Tools & Features',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const ToolsPage(),
+                                    ),
+                                  );
+                                },
+                                child: const Text(
+                                  'See All',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 10),
                           _buildMenuGrid(context),
                           const SizedBox(height: 30),
                           _buildRecentActivity(),
