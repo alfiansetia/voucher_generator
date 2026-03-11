@@ -22,7 +22,8 @@ dependencies:
   drift: ^2.31.0
   sqlite3_flutter_libs: ^0.6.0+eol
   internet_speed_meter: ^1.0.3
-  flutter_traceroute: ^0.0.1+2
+  wifi_scan: ^0.4.1+2
+  permission_handler: ^12.0.1
   
 
 dev_dependencies:

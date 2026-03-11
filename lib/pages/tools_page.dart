@@ -7,6 +7,7 @@ import 'network_discovery_page.dart';
 import 'port_scanner_page.dart';
 import 'wake_on_lan_page.dart';
 import 'traceroute_page.dart';
+import 'wifi_scanner_page.dart';
 
 class ToolsPage extends StatelessWidget {
   const ToolsPage({super.key});
@@ -131,6 +132,19 @@ class ToolsPage extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const TraceroutePage(),
+                    ),
+                  ),
+                ),
+                _buildMenuCard(
+                  context,
+                  'WiFi Scanner',
+                  'Scan nearby networks',
+                  Icons.wifi_find,
+                  Colors.cyan,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const WifiScannerPage(),
                     ),
                   ),
                 ),
