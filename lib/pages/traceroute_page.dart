@@ -6,6 +6,7 @@ import '../core/constants/app_constants.dart';
 class _HopResult {
   final int hop;
   final String ip;
+  final String? hostname;
   final String label;
   final int? ms;
   final bool timedOut;
@@ -13,6 +14,7 @@ class _HopResult {
   _HopResult({
     required this.hop,
     required this.ip,
+    this.hostname,
     this.label = '',
     this.ms,
     this.timedOut = false,
@@ -83,8 +85,8 @@ class _TraceroutePageState extends State<TraceroutePage> {
 
     try {
       if (Platform.isWindows) {
+        // Remove '-d' to allowed hostname resolution
         _process = await Process.start('tracert', [
-          '-d',
           '-h',
           '30',
           '-w',
@@ -105,23 +107,51 @@ class _TraceroutePageState extends State<TraceroutePage> {
                 return;
               }
 
-              // Windows tracert line format: " 1    <1 ms    <1 ms    <1 ms  192.168.1.1"
+              // Windows tracert line format examples:
+              // " 1    <1 ms    <1 ms     1 ms  wifi.wifi [192.168.4.1]"
+              // " 2     5 ms     3 ms     4 ms  192.168.100.1"
               final hopRegex = RegExp(r'^\s*(\d+)\s+(.+)$');
               final match = hopRegex.firstMatch(trimmed);
               if (match != null) {
                 final hopNum = int.tryParse(match.group(1)!) ?? 0;
                 final rest = match.group(2)!.trim();
-                final ipRegex = RegExp(r'(\d{1,3}(?:\.\d{1,3}){3})');
-                final ipMatch = ipRegex.firstMatch(rest);
-                final ip = ipMatch?.group(0) ?? '*';
+
                 final timedOut = rest.contains('* * *') || !rest.contains('ms');
+                String ip = '*';
+                String? hostname;
                 int? ms;
+
                 if (!timedOut) {
+                  // Extract IP
+                  final ipRegex = RegExp(r'\[?(\d{1,3}(?:\.\d{1,3}){3})\]?');
+                  final ipMatch = ipRegex.firstMatch(rest);
+                  ip = ipMatch?.group(1) ?? '*';
+
+                  // Extract Hostname (everything after the last 'ms' or '<1 ms', before the IP brackets)
+                  final namePart = rest
+                      .split(RegExp(r'\d+\s*ms|<1\s*ms'))
+                      .last
+                      .trim();
+                  if (namePart.isNotEmpty) {
+                    if (namePart.contains('[') && namePart.contains(']')) {
+                      hostname = namePart.split('[').first.trim();
+                    } else if (namePart != ip) {
+                      hostname = namePart;
+                    }
+                  }
+
                   final msMatch = RegExp(r'(\d+)\s*ms').firstMatch(rest);
                   ms = msMatch != null ? int.tryParse(msMatch.group(1)!) : null;
                 }
+
                 _addHop(
-                  _HopResult(hop: hopNum, ip: ip, ms: ms, timedOut: timedOut),
+                  _HopResult(
+                    hop: hopNum,
+                    ip: ip,
+                    hostname: (hostname == ip) ? null : hostname,
+                    ms: ms,
+                    timedOut: timedOut,
+                  ),
                 );
               }
             });
@@ -470,7 +500,7 @@ class _TraceroutePageState extends State<TraceroutePage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                isTimeout ? '* * *' : hop.ip,
+                                isTimeout ? '* * *' : (hop.hostname ?? hop.ip),
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
@@ -479,6 +509,14 @@ class _TraceroutePageState extends State<TraceroutePage> {
                                       : Colors.black87,
                                 ),
                               ),
+                              if (!isTimeout && hop.hostname != null)
+                                Text(
+                                  hop.ip,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
                               if (isDestination)
                                 Text(
                                   '✓ Destination Reached',
