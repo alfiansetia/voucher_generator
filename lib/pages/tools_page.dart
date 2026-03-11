@@ -6,6 +6,7 @@ import 'ip_calculator_page.dart';
 import 'network_discovery_page.dart';
 import 'port_scanner_page.dart';
 import 'wake_on_lan_page.dart';
+import 'traceroute_page.dart';
 
 class ToolsPage extends StatelessWidget {
   const ToolsPage({super.key});
@@ -117,6 +118,19 @@ class ToolsPage extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const WakeOnLanPage(),
+                    ),
+                  ),
+                ),
+                _buildMenuCard(
+                  context,
+                  'Traceroute',
+                  'Trace network path',
+                  Icons.route,
+                  Colors.indigo,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TraceroutePage(),
                     ),
                   ),
                 ),

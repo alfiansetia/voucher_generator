@@ -7,6 +7,7 @@ import 'home_page.dart';
 import '../components/ping_dialog.dart';
 import 'port_scanner_page.dart';
 import 'wake_on_lan_page.dart';
+import 'traceroute_page.dart';
 
 class NetworkDiscoveryPage extends StatefulWidget {
   const NetworkDiscoveryPage({super.key});
@@ -358,6 +359,20 @@ class _NetworkDiscoveryPageState extends State<NetworkDiscoveryPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => WakeOnLanPage(initialIp: address),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.route, color: Colors.indigo),
+              title: const Text('Traceroute'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        TraceroutePage(initialTarget: address),
                   ),
                 );
               },
