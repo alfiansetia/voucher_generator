@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/constants/app_constants.dart';
 import 'router_list_page.dart';
 import 'ping_tool_page.dart';
+import 'ip_calculator_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -169,8 +170,10 @@ class HomePage extends StatelessWidget {
           'Subnetting made easy',
           Icons.calculate,
           Colors.green,
-          () {},
-          isLocked: true,
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const IpCalculatorPage()),
+          ),
         ),
         _buildMenuCard(
           context,
