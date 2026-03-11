@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'bloc/router_bloc.dart';
 import 'bloc/mikrotik_bloc.dart';
-import 'pages/home_page.dart';
+import 'pages/splash_screen.dart';
 import 'repositories/router_repository.dart';
 import 'repositories/mikrotik_repository.dart';
 
@@ -39,7 +39,7 @@ class MainApp extends StatelessWidget {
             useMaterial3: true,
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           ),
-          home: const HomePage(),
+          home: const SplashScreen(),
         ),
       ),
     );
