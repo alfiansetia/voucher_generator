@@ -6,7 +6,16 @@ import 'pages/splash_screen.dart';
 import 'repositories/router_repository.dart';
 import 'repositories/mikrotik_repository.dart';
 
-void main() {
+import 'package:network_tools/network_tools.dart';
+import 'package:path_provider/path_provider.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize network tools path
+  final appDocDir = await getApplicationDocumentsDirectory();
+  await configureNetworkTools(appDocDir.path);
+
   runApp(const MainApp());
 }
 

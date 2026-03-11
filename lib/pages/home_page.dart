@@ -1,12 +1,218 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../core/constants/app_constants.dart';
 import 'router_list_page.dart';
 import 'ping_tool_page.dart';
 import 'ip_calculator_page.dart';
+import 'network_discovery_page.dart';
+import 'package:network_info_plus/network_info_plus.dart';
+import 'package:http/http.dart' as http;
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final List<double> _upData = List.generate(20, (_) => 20.0);
+  final List<double> _downData = List.generate(20, (_) => 50.0);
+  Timer? _trafficTimer;
+  double _upSpeed = 0.0;
+  double _downSpeed = 0.0;
+
+  // Network Info State
+  String _localIp = '...';
+  String _publicIp = '...';
+  String _gateway = '...';
+  Map<String, String> _fullNetInfo = {};
+  final NetworkInfo _networkInfo = NetworkInfo();
+
+  @override
+  void initState() {
+    super.initState();
+    _startSimulatingTraffic();
+    _fetchNetworkInfo();
+  }
+
+  Future<void> _fetchNetworkInfo() async {
+    try {
+      final ip = await _networkInfo.getWifiIP();
+      final gateway = await _networkInfo.getWifiGatewayIP();
+      const subnet = 'Tidak Tersedia';
+      final name = await _networkInfo.getWifiName();
+
+      String pubIp = '...';
+      try {
+        final response = await http
+            .get(Uri.parse('https://api.ipify.org'))
+            .timeout(const Duration(seconds: 5));
+        if (response.statusCode == 200) {
+          pubIp = response.body;
+        }
+      } catch (_) {
+        pubIp = 'Offline';
+      }
+
+      if (mounted) {
+        setState(() {
+          _localIp = ip ?? 'Tidak Tersedia';
+          _publicIp = pubIp;
+          _gateway = gateway ?? 'Tidak Tersedia';
+          _fullNetInfo = {
+            'Local IP': _localIp,
+            'Public IP': _publicIp,
+            'Gateway': _gateway,
+            'Subnet Mask': subnet,
+            'SSID': name ?? 'Tidak Tersedia',
+          };
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _localIp = 'Tidak Tersedia';
+          _publicIp = 'Tidak Tersedia';
+          _gateway = 'Tidak Tersedia';
+        });
+      }
+    }
+  }
+
+  void _showNetworkDetails() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(30),
+            topRight: Radius.circular(30),
+          ),
+        ),
+        padding: const EdgeInsets.all(25),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 25),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.lan, color: Colors.blue),
+                ),
+                const SizedBox(width: 15),
+                const Text(
+                  'Network Details',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+            Expanded(
+              child: ListView(
+                physics: const BouncingScrollPhysics(),
+                children: _fullNetInfo.entries
+                    .map((e) => _buildDetailItem(e.key, e.value))
+                    .toList(),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Dismiss',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailItem(String title, String value) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _startSimulatingTraffic() {
+    _trafficTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          // Simulate Download (usually higher)
+          _downSpeed = 200 + Random().nextDouble() * 800;
+          _downData.removeAt(0);
+          _downData.add(_downSpeed / 15);
+
+          // Simulate Upload (usually lower)
+          _upSpeed = 50 + Random().nextDouble() * 150;
+          _upData.removeAt(0);
+          _upData.add(_upSpeed / 10);
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _trafficTimer?.cancel();
+    super.dispose();
+  }
 
   Future<bool?> _showExitConfirmation(BuildContext context) {
     return showDialog<bool>(
@@ -94,6 +300,8 @@ class HomePage extends StatelessWidget {
                           _buildMenuGrid(context),
                           const SizedBox(height: 30),
                           _buildRecentActivity(),
+                          const SizedBox(height: 30),
+                          _buildTrafficMonitor(),
                           const SizedBox(height: 30),
                         ],
                       ),
@@ -216,12 +424,16 @@ class HomePage extends StatelessWidget {
         ),
         _buildMenuCard(
           context,
-          'Voucher History',
-          'Track your sales',
-          Icons.history,
+          'Network Discovery',
+          'Scan devices in network',
+          Icons.radar,
           Colors.purple,
-          () {},
-          isLocked: true,
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const NetworkDiscoveryPage(),
+            ),
+          ),
         ),
       ],
     );
@@ -291,33 +503,129 @@ class HomePage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Quick Stats',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Network Info',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            TextButton(
+              onPressed: _showNetworkDetails,
+              child: const Text('Details', style: TextStyle(fontSize: 12)),
+            ),
+          ],
         ),
-        const SizedBox(height: 15),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.blue.shade50,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildSimpleStat('Vouchers', '1,240'),
-              _buildDivider(),
-              _buildSimpleStat('Active Usr', '842'),
-              _buildDivider(),
-              _buildSimpleStat('Uptime', '99.9%'),
-            ],
+        const SizedBox(height: 10),
+        InkWell(
+          onTap: _showNetworkDetails,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.blue.shade100),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildSimpleStat('Local IP', _localIp),
+                _buildDivider(),
+                _buildSimpleStat('Public IP', _publicIp),
+                _buildDivider(),
+                _buildSimpleStat('Gateway', _gateway),
+              ],
+            ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildTrafficMonitor() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Network Monitor',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  Text(
+                    'Real-time traffic',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ],
+              ),
+              Icon(Icons.insights, color: Colors.blue, size: 20),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 100,
+            width: double.infinity,
+            child: CustomPaint(painter: TrafficPainter(_upData, _downData)),
+          ),
+          const SizedBox(height: 15),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildSpeedBadge(Icons.arrow_downward, _downSpeed, Colors.blue),
+              const SizedBox(width: 15),
+              _buildSpeedBadge(Icons.arrow_upward, _upSpeed, Colors.green),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpeedBadge(IconData icon, double speed, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            '${speed.toStringAsFixed(1)} kbps',
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -348,4 +656,54 @@ class HomePage extends StatelessWidget {
   Widget _buildDivider() {
     return Container(height: 30, width: 1, color: Colors.blue.shade100);
   }
+}
+
+class TrafficPainter extends CustomPainter {
+  final List<double> upData;
+  final List<double> downData;
+
+  TrafficPainter(this.upData, this.downData);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    _drawData(canvas, size, downData, Colors.blue);
+    _drawData(canvas, size, upData, Colors.green);
+  }
+
+  void _drawData(Canvas canvas, Size size, List<double> data, Color color) {
+    if (data.length < 2) return;
+
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.0)],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final path = Path();
+    final stepX = size.width / (data.length - 1);
+
+    path.moveTo(0, size.height - data[0]);
+
+    for (int i = 1; i < data.length; i++) {
+      path.lineTo(i * stepX, size.height - data[i]);
+    }
+
+    final fillPath = Path.from(path);
+    fillPath.lineTo(size.width, size.height);
+    fillPath.lineTo(0, size.height);
+    fillPath.close();
+
+    canvas.drawPath(fillPath, fillPaint);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(TrafficPainter oldDelegate) => true;
 }
