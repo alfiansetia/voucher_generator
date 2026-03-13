@@ -7,6 +7,7 @@ import '../bloc/mikrotik_state.dart';
 import '../core/constants/app_constants.dart';
 import '../core/utils/mikrotik_utils.dart';
 import 'home_page.dart';
+import 'hotspot_voucher_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -19,13 +20,14 @@ class _DashboardPageState extends State<DashboardPage> {
   Timer? _statsTimer;
   Timer? _tickTimer;
   Duration? _currentUptime;
+  bool _isPaused = false; // Menghentikan fetch saat halaman lain sedang aktif
 
   @override
   void initState() {
     super.initState();
     // Start periodic timer to fetch resources every 5 seconds
     _statsTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (mounted) {
+      if (mounted && !_isPaused) {
         context.read<MikrotikBloc>().add(FetchMikrotikResources());
       }
     });
@@ -128,8 +130,26 @@ class _DashboardPageState extends State<DashboardPage> {
                       'Voucher Generator',
                       Icons.confirmation_number,
                       Colors.orange,
-                      () {
-                        // Navigate to Voucher Page
+                      () async {
+                        final state = context.read<MikrotikBloc>().state;
+                        if (state is MikrotikConnected) {
+                          // Jeda timer agar tidak tabrakan dengan perintah di VoucherPage
+                          setState(() => _isPaused = true);
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const HotspotVoucherPage(),
+                            ),
+                          );
+                          // Timer aktif kembali setelah kembali ke Dashboard
+                          if (mounted) setState(() => _isPaused = false);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Not connected to MikroTik'),
+                            ),
+                          );
+                        }
                       },
                     ),
                     _buildFeatureCard(

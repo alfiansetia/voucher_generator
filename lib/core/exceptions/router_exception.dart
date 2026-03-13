@@ -27,3 +27,8 @@ class MikrotikAuthException extends RouterException {
   MikrotikAuthException([String message = 'Invalid username or password'])
     : super(message, 'AUTH_ERROR');
 }
+
+class MikrotikException extends RouterException {
+  MikrotikException(String message, [String? code])
+    : super(message, code ?? 'MIKROTIK_ERROR');
+}
