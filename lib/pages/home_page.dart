@@ -768,6 +768,40 @@ class _HomePageState extends State<HomePage> {
                   _buildSimpleStat(context, 'Public IP', _publicIp),
                 ],
               ),
+              if (_isp != 'N/A' && _isp != '...') ...[
+                const SizedBox(height: 12),
+                Container(
+                  height: 1,
+                  width: double.infinity,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : Colors.blue.shade100.withValues(alpha: 0.5),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.business,
+                      size: 14,
+                      color: isDark ? Colors.blue[300] : Colors.blue.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        _isp,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : Colors.blue.shade800,
+                        ),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),

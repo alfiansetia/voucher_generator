@@ -85,7 +85,6 @@ class _TraceroutePageState extends State<TraceroutePage> {
 
     try {
       if (Platform.isWindows) {
-        // Remove '-d' to allowed hostname resolution
         _process = await Process.start('tracert', [
           '-h',
           '30',
@@ -101,6 +100,7 @@ class _TraceroutePageState extends State<TraceroutePage> {
               if (!mounted || !_isTracing) return;
               final trimmed = line.trim();
               if (trimmed.isEmpty) return;
+
               if (trimmed.contains('Tracing route') ||
                   trimmed.contains('over a maximum') ||
                   trimmed.contains('Trace complete')) {
@@ -116,27 +116,39 @@ class _TraceroutePageState extends State<TraceroutePage> {
                 final hopNum = int.tryParse(match.group(1)!) ?? 0;
                 final rest = match.group(2)!.trim();
 
-                final timedOut = rest.contains('* * *') || !rest.contains('ms');
+                final timedOut = rest.contains('* * *');
                 String ip = '*';
                 String? hostname;
                 int? ms;
 
                 if (!timedOut) {
-                  // Extract IP
-                  final ipRegex = RegExp(r'\[?(\d{1,3}(?:\.\d{1,3}){3})\]?');
-                  final ipMatch = ipRegex.firstMatch(rest);
-                  ip = ipMatch?.group(1) ?? '*';
+                  // Extract IP (matches bracketed or plain IP)
+                  final ipRegex = RegExp(r'(\d{1,3}(?:\.\d{1,3}){3})');
+                  final ipMatches = ipRegex.allMatches(rest).toList();
+                  if (ipMatches.isNotEmpty) {
+                    ip = ipMatches.last.group(0)!;
+                  }
 
-                  // Extract Hostname (everything after the last 'ms' or '<1 ms', before the IP brackets)
-                  final namePart = rest
-                      .split(RegExp(r'\d+\s*ms|<1\s*ms'))
-                      .last
-                      .trim();
-                  if (namePart.isNotEmpty) {
-                    if (namePart.contains('[') && namePart.contains(']')) {
-                      hostname = namePart.split('[').first.trim();
-                    } else if (namePart != ip) {
-                      hostname = namePart;
+                  // Extract all components after the times
+                  final parts = rest.split(RegExp(r'\s+'));
+                  // The times usually take 3 positions. Find the first non-time part after the first 3 columns.
+                  // But sometimes it's <1 ms.
+                  // Let's use a more robust way: find the first part that looks like a name or IP
+                  int nameIndex = -1;
+                  for (int i = 0; i < parts.length; i++) {
+                    if (parts[i].contains('.') ||
+                        (parts[i].length > 3 && !parts[i].contains('ms'))) {
+                      nameIndex = i;
+                      break;
+                    }
+                  }
+
+                  if (nameIndex != -1) {
+                    final nameAndIp = parts.sublist(nameIndex).join(' ');
+                    if (nameAndIp.contains('[') && nameAndIp.contains(']')) {
+                      hostname = nameAndIp.split('[').first.trim();
+                    } else if (nameAndIp != ip) {
+                      hostname = nameAndIp;
                     }
                   }
 
@@ -148,7 +160,10 @@ class _TraceroutePageState extends State<TraceroutePage> {
                   _HopResult(
                     hop: hopNum,
                     ip: ip,
-                    hostname: (hostname == ip) ? null : hostname,
+                    hostname:
+                        (hostname == null || hostname.isEmpty || hostname == ip)
+                        ? null
+                        : hostname,
                     ms: ms,
                     timedOut: timedOut,
                   ),
@@ -161,42 +176,67 @@ class _TraceroutePageState extends State<TraceroutePage> {
         for (int ttl = 1; ttl <= 30; ttl++) {
           if (!mounted || !_isTracing) break;
           final result = await Process.run('ping', [
-            '-c',
-            '1',
-            '-t',
-            ttl.toString(),
-            '-W',
-            '1',
+            '-c', '1',
+            '-t', ttl.toString(),
+            '-W', '2', // Wait 2 seconds
             target,
           ]);
           final out = '${result.stdout}${result.stderr}';
           final ipRegex = RegExp(r'\b(?:\d{1,3}\.){3}\d{1,3}\b');
 
-          if (out.contains('exceeded') || out.contains('Time to live')) {
-            final matches = ipRegex.allMatches(out).toList();
-            final hopIp = matches.isNotEmpty ? matches.last.group(0)! : '*';
+          if (out.contains('exceeded') ||
+              out.contains('Time to live') ||
+              out.contains('bytes from')) {
+            // Usually the sender's IP is what we want.
+            // In "From 1.2.3.4: icmp_seq=1 Time to live exceeded", it's the first IP.
+            // In "64 bytes from 8.8.8.8: icmp_seq=1 ttl=117 time=14.2 ms", it's also the first IP.
+
+            String? hopIp;
+            if (out.contains('From ')) {
+              final fromSplit = out.split('From ');
+              if (fromSplit.length > 1) {
+                final possibleIp = ipRegex.firstMatch(fromSplit[1]);
+                hopIp = possibleIp?.group(0);
+              }
+            }
+
+            if (hopIp == null) {
+              final firstMatch = ipRegex.firstMatch(out);
+              hopIp =
+                  firstMatch?.group(0) ??
+                  (out.contains('bytes from') ? target : '*');
+            }
+
             final msMatch = RegExp(r'time=(\d+(?:\.\d+)?)').firstMatch(out);
             final ms = msMatch != null
                 ? double.tryParse(msMatch.group(1)!)?.toInt()
                 : null;
-            _addHop(_HopResult(hop: ttl, ip: hopIp, ms: ms, timedOut: false));
-          } else if (out.contains('bytes from')) {
-            final matches = ipRegex.allMatches(out).toList();
-            final hopIp = matches.isNotEmpty ? matches.last.group(0)! : target;
-            final msMatch = RegExp(r'time=(\d+(?:\.\d+)?)').firstMatch(out);
-            final ms = msMatch != null
-                ? double.tryParse(msMatch.group(1)!)?.toInt()
-                : null;
+
+            String? hostname;
+            if (hopIp != '*' && hopIp != target) {
+              try {
+                final addresses = await InternetAddress.lookup(hopIp);
+                if (addresses.isNotEmpty) {
+                  final host = await addresses.first.reverse();
+                  if (host.host != hopIp) {
+                    hostname = host.host;
+                  }
+                }
+              } catch (_) {}
+            }
+
             _addHop(
               _HopResult(
                 hop: ttl,
                 ip: hopIp,
+                hostname: hostname,
                 ms: ms,
-                label: 'Destination',
+                label: out.contains('bytes from') ? 'Destination' : '',
                 timedOut: false,
               ),
             );
-            break;
+
+            if (out.contains('bytes from')) break;
           } else {
             _addHop(_HopResult(hop: ttl, ip: '*', timedOut: true));
           }
